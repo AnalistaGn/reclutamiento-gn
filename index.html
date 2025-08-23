@@ -57,8 +57,11 @@
     // 1. Función para buscar candidatos con mejor manejo de errores
     async function searchCandidates(query) {
       try {
+        // 🔧 Corregido: Elimina el guion del RUT antes de la búsqueda
+        const sanitizedQuery = query.replace(/-/g, '');
+
         // Se modifica la URL para buscar específicamente en la columna 'rut'
-        const response = await fetch(`${SHEETDB_API_URL}/search?rut=${encodeURIComponent(query)}`);
+        const response = await fetch(`${SHEETDB_API_URL}/search?rut=${encodeURIComponent(sanitizedQuery)}`);
         if (!response.ok) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
