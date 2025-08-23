@@ -8,72 +8,31 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.5/babel.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    /* Define los colores personalizados usando CSS variables */
-    :root {
-      --color-background: #002338;
-      --color-primary-text: #77c25c;
-    }
-    
-    body {
-      background-color: var(--color-background);
-      color: var(--color-primary-text);
-    }
-
-    /* Configuración de Tailwind para usar los colores personalizados */
-    @layer base {
-      .bg-custom-bg {
-        background-color: var(--color-background);
-      }
-      .text-custom-primary {
-        color: var(--color-primary-text);
-      }
-    }
-  </style>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            custom: {
-              bg: '#002338',
-              primary: '#77c25c'
-            }
-          }
-        }
-      }
-    }
-  </script>
 </head>
-<body class="bg-custom-bg text-custom-primary min-h-screen">
+<body class="bg-gray-900 text-white min-h-screen">
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    const { useState } = React;
 
     // ⚠️ Pega tu URL completa de la API de SheetDB aquí
-    const SHEETDB_API_URL = "https://sheetdb.io/api/v1/arqvckj0fb8af";
+    const SHEETDB_API_URL = "https://sheetdb.io/api/v1/TU_API_KEY";
 
-    // 1. Función para buscar candidatos con mejor manejo de errores
+    // 🔎 Búsqueda parcial (nombre, rut, cargo, email)
     async function searchCandidates(query) {
       try {
-        // 🔧 Corregido: Elimina el guion del RUT antes de la búsqueda
-        const sanitizedQuery = query.replace(/-/g, '');
+        const sanitizedQuery = query.trim();
 
-        // Se modifica la URL para buscar específicamente en la columna 'rut'
-        const response = await fetch(`${SHEETDB_API_URL}/search?rut=${encodeURIComponent(sanitizedQuery)}`);
+        // Usamos /search_or con contains para búsqueda parcial
+        const response = await fetch(
+          `${SHEETDB_API_URL}/search_or?contains=rut,nombre,cargo,email&q=${encodeURIComponent(sanitizedQuery)}`
+        );
+
         if (!response.ok) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
+
         const data = await response.json();
-
-        // ⚠️ Se añade esta verificación para manejar los errores de SheetDB
-        if (data.error) {
-          console.error("Error de SheetDB:", data.error);
-          return { success: true, data: [] }; // Retorna un array vacío
-        }
-
-        // Se asegura de que 'data' sea un array; si no, devuelve un array vacío
         return { success: true, data: Array.isArray(data) ? data : [] };
       } catch (error) {
         console.error("Error al buscar candidatos:", error);
@@ -81,26 +40,15 @@
       }
     }
 
-    // 2. Guardar con mejor validación y manejo de errores
+    // 💾 Guardar decisión en la hoja
     async function saveToSheetDB(record) {
       try {
-        // Validar campos requeridos
-        if (!record.nombre || !record.rut) {
-          throw new Error("Nombre y RUT son campos requeridos");
-        }
-
         const response = await fetch(SHEETDB_API_URL, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(record),
         });
-
-        if (!response.ok) {
-          throw new Error(`Error ${response.status}: ${response.statusText}`);
-        }
-
+        if (!response.ok) throw new Error("Error al guardar en la hoja");
         return { success: true };
       } catch (error) {
         console.error("Error al guardar:", error);
@@ -108,348 +56,141 @@
       }
     }
 
-    // Componente de modal de confirmación
-    function ConfirmationModal({ isOpen, onClose, onConfirm, candidato, action }) {
-      if (!isOpen) return null;
-
-      return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 p-6 rounded-lg max-w-md w-full mx-4">
-            <h3 className="text-lg font-bold mb-4">Confirmar Decisión</h3>
-            <p className="mb-4">
-              ¿Estás seguro de que deseas {action === 'accept' ? 'RECLUTAR' : 'RECHAZAR'} a:
-            </p>
-            <div className="bg-gray-700 p-3 rounded mb-4">
-              <p className="font-semibold">{candidato?.nombre}</p>
-              <p className="text-sm text-gray-300">RUT: {candidato?.rut}</p>
-              <p className="text-sm text-gray-300">Cargo: {candidato?.cargo}</p>
-            </div>
-            <div className="flex space-x-3">
-              <button
-                onClick={onConfirm}
-                className={`px-4 py-2 rounded font-medium ${
-                  action === 'accept'
-                    ? 'bg-green-600 hover:bg-green-700'
-                    : 'bg-red-600 hover:bg-red-700'
-                } transition-colors`}
-              >
-                {action === 'accept' ? '✅ Confirmar Reclutamiento' : '❌ Confirmar Rechazo'}
-              </button>
-              <button
-                onClick={onClose}
-                className="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded font-medium transition-colors"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Componente de notificación
-    function Notification({ message, type, onClose }) {
-      useEffect(() => {
-        const timer = setTimeout(onClose, 5000);
-        return () => clearTimeout(timer);
-      }, [onClose]);
-
-      if (!message) return null;
-
-      const bgColor = type === 'error' ? 'bg-red-600' : type === 'success' ? 'bg-green-600' : 'bg-blue-600';
-
-      return (
-        <div className={`fixed top-4 right-4 ${bgColor} text-white p-4 rounded-lg shadow-lg z-50 max-w-sm`}>
-          <div className="flex justify-between items-start">
-            <p>{message}</p>
-            <button onClick={onClose} className="ml-2 text-white hover:text-gray-200">
-              ✕
-            </button>
-          </div>
-        </div>
-      );
-    }
-
     function RecruitmentApp() {
       const [busqueda, setBusqueda] = useState("");
       const [resultados, setResultados] = useState([]);
       const [gestiones, setGestiones] = useState([]);
       const [loading, setLoading] = useState(false);
-      const [notification, setNotification] = useState({ message: "", type: "" });
-      const [confirmModal, setConfirmModal] = useState({ isOpen: false, candidato: null, action: null });
 
-      // Función para mostrar notificaciones
-      const showNotification = (message, type) => {
-        setNotification({ message, type });
-      };
-
-      const closeNotification = () => {
-        setNotification({ message: "", type: "" });
-      };
-
-      // Búsqueda mejorada con loading y manejo de errores
       const handleSearch = async () => {
-        if (busqueda.trim() === "") {
+        if (!busqueda.trim()) {
           setResultados([]);
           return;
         }
-
         setLoading(true);
-        try {
-          const result = await searchCandidates(busqueda.trim());
-          if (result.success) {
-            setResultados(result.data);
-            if (result.data.length === 0) {
-              showNotification("No se encontraron candidatos con ese criterio de búsqueda.", "info");
-            } else {
-              showNotification(`Se encontraron ${result.data.length} candidato(s).`, "success");
-            }
-          } else {
-            showNotification(`Error al buscar: ${result.error}`, "error");
-            setResultados([]);
-          }
-        } catch (error) {
-          showNotification("Error inesperado durante la búsqueda.", "error");
-          setResultados([]);
-        } finally {
-          setLoading(false);
+        const result = await searchCandidates(busqueda);
+        setLoading(false);
+        if (result.success) {
+          setResultados(result.data);
+        } else {
+          alert("Error al buscar: " + result.error);
         }
       };
 
-      // Abrir modal de confirmación
-      const openConfirmModal = (candidato, action) => {
-        setConfirmModal({ isOpen: true, candidato, action });
-      };
-
-      // Cerrar modal de confirmación
-      const closeConfirmModal = () => {
-        setConfirmModal({ isOpen: false, candidato: null, action: null });
-      };
-
-      // Procesar decisión con confirmación
-      const handleDecision = async () => {
-        const { candidato, action } = confirmModal;
-        const reclutado = action === 'accept';
-
+      const handleDecision = async (candidato, reclutado) => {
         const record = {
-          nombre: candidato.nombre || 'N/A',
-          rut: candidato.rut || 'N/A',
-          cargo: candidato.cargo || 'N/A',
-          email: candidato.email || 'N/A',
-          telefono: candidato.telefono || 'N/A',
-          fechaPostulacion: candidato.fechaPostulacion || 'N/A',
+          nombre: candidato.nombre || "N/A",
+          rut: candidato.rut || "N/A",
+          cargo: candidato.cargo || "N/A",
+          email: candidato.email || "N/A",
+          telefono: candidato.telefono || "N/A",
+          fechaPostulacion: candidato.fechaPostulacion || "N/A",
           reclutado: reclutado ? "Sí" : "No",
-          motivo: reclutado ? "Aprobado en entrevista" : "No cumple con los requisitos",
+          motivo: reclutado ? "Aprobado en entrevista" : "No cumple requisitos",
           fechaRegistro: new Date().toLocaleDateString("es-CL"),
-          horaRegistro: new Date().toLocaleTimeString("es-CL", { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-          })
+          horaRegistro: new Date().toLocaleTimeString("es-CL", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
         };
-        
-        // Guardar en SheetDB
-        const saveResult = await saveToSheetDB(record);
-        
-        if (saveResult.success) {
+
+        const save = await saveToSheetDB(record);
+        if (save.success) {
           setGestiones(prev => [record, ...prev]);
-          showNotification(
-            `Decisión registrada: ${candidato.nombre} fue ${reclutado ? 'RECLUTADO' : 'RECHAZADO'}.`, 
-            "success"
-          );
-          
-          // Remover candidato de los resultados
           setResultados(prev => prev.filter(c => c.rut !== candidato.rut));
         } else {
-          showNotification(`Error al guardar: ${saveResult.error}`, "error");
+          alert("Error al guardar: " + save.error);
         }
-        
-        closeConfirmModal();
-      };
-
-      // Limpiar búsqueda
-      const clearSearch = () => {
-        setBusqueda("");
-        setResultados([]);
       };
 
       return (
         <div className="p-6 max-w-6xl mx-auto">
           {/* Header */}
-          <header className="text-center mb-8 flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-8">
-            <img src="https://github.com/AnalistaGn/dashboard-gn-e/blob/main/Grupo%20%5E%20Norte_%20Creamos%20.png?raw=true" alt="Grupo Norte Logo" className="w-48" />
-            <img src="https://github.com/AnalistaGn/dashboard-gn-e/blob/main/Norti%CC%81n%20Verde.png?raw=true" alt="Nortín Verde" className="w-24" />
-          </header>
+          <h1 className="text-3xl font-bold text-center mb-6">📋 Sistema de Reclutamiento</h1>
 
-          {/* Buscador mejorado */}
-          <div className="mb-6">
-            <div className="flex flex-col sm:flex-row gap-2">
-              <div className="flex-grow relative">
-                <input
-                  type="text"
-                  value={busqueda}
-                  onChange={e => setBusqueda(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !loading) handleSearch();
-                  }}
-                  disabled={loading}
-                  className="w-full px-4 py-3 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                  placeholder="Buscar por nombre, RUT, cargo, email..."
-                />
-                {busqueda && (
-                  <button
-                    onClick={clearSearch}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-              <button
-                onClick={handleSearch}
-                disabled={loading || !busqueda.trim()}
-                className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed px-6 py-3 rounded-lg transition-colors font-medium"
-              >
-                {loading ? (
-                  <span className="flex items-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Buscando...
-                  </span>
-                ) : (
-                  "🔍 Buscar"
-                )}
-              </button>
-            </div>
-            {/*  */}
+          {/* Buscador */}
+          <div className="mb-6 flex gap-2">
+            <input
+              type="text"
+              value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && handleSearch()}
+              className="flex-grow px-4 py-2 rounded text-black"
+              placeholder="Buscar por nombre, RUT, cargo o email..."
+            />
+            <button
+              onClick={handleSearch}
+              disabled={loading}
+              className="bg-green-600 hover:bg-green-700 px-6 py-2 rounded"
+            >
+              {loading ? "Buscando..." : "Buscar"}
+            </button>
           </div>
 
-          {/* Resultados mejorados */}
-          <div className="bg-gray-800 rounded-lg shadow-lg min-h-[300px]">
-            <div className="p-4 border-b border-gray-700">
-              <h2 className="text-xl font-semibold">
-                Candidatos Encontrados {resultados.length > 0 && `(${resultados.length})`}
-              </h2>
-            </div>
-            
-            <div className="p-4">
-              {loading ? (
-                <div className="flex items-center justify-center h-40">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                  <span className="ml-3">Buscando candidatos...</span>
-                </div>
-              ) : resultados.length > 0 ? (
-                <div className="space-y-4">
-                  {resultados.map(c => (
-                    <div key={c.rut} className="bg-gray-700 p-4 rounded-lg hover:bg-gray-600 transition-colors">
-                      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center">
-                        <div className="flex-grow">
-                          <h3 className="font-bold text-xl text-blue-400 mb-2">{c.nombre}</h3>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                            <p><span className="text-gray-400">RUT:</span> {c.rut}</p>
-                            <p><span className="text-gray-400">Cargo:</span> {c.cargo}</p>
-                            <p><span className="text-gray-400">Email:</span> {c.email}</p>
-                            <p><span className="text-gray-400">Teléfono:</span> {c.telefono}</p>
-                            {c.fechaPostulacion && (
-                              <p><span className="text-gray-400">Fecha Postulación:</span> {c.fechaPostulacion}</p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="mt-4 lg:mt-0 flex space-x-3">
-                          <button
-                            onClick={() => openConfirmModal(c, 'accept')}
-                            className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg transition-colors font-medium"
-                          >
-                            ✅ Reclutar
-                          </button>
-                          <button
-                            onClick={() => openConfirmModal(c, 'reject')}
-                            className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition-colors font-medium"
-                          >
-                            ❌ Rechazar
-                          </button>
-                        </div>
-                      </div>
+          {/* Resultados */}
+          <div className="bg-gray-800 rounded-lg p-4 mb-6">
+            <h2 className="text-xl mb-4">Resultados</h2>
+            {loading ? (
+              <p>⏳ Cargando...</p>
+            ) : resultados.length > 0 ? (
+              <div className="space-y-3">
+                {resultados.map(c => (
+                  <div key={c.rut} className="bg-gray-700 p-4 rounded flex justify-between items-center">
+                    <div>
+                      <p className="font-bold text-lg">{c.nombre}</p>
+                      <p className="text-sm">RUT: {c.rut} | Cargo: {c.cargo}</p>
+                      <p className="text-sm">📧 {c.email} | 📱 {c.telefono}</p>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-20">
-                  <div className="text-6xl mb-4">🔍</div>
-                  <p className="text-custom-primary text-lg">
-                    {busqueda ? "No se encontraron resultados para tu búsqueda." : "Ingresa un término de búsqueda para comenzar."}
-                  </p>
-                </div>
-              )}
-            </div>
+                    <div className="space-x-2">
+                      <button
+                        onClick={() => handleDecision(c, true)}
+                        className="bg-blue-600 px-3 py-1 rounded"
+                      >
+                        ✅ Reclutar
+                      </button>
+                      <button
+                        onClick={() => handleDecision(c, false)}
+                        className="bg-red-600 px-3 py-1 rounded"
+                      >
+                        ❌ Rechazar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p>No hay resultados</p>
+            )}
           </div>
 
-          {/* Historial de gestiones mejorado */}
+          {/* Historial */}
           {gestiones.length > 0 && (
-            <div className="mt-8 bg-gray-800 rounded-lg shadow-lg">
-              <div className="p-4 border-b border-gray-700 flex justify-between items-center">
-                <h2 className="text-xl font-semibold">Historial de Gestiones ({gestiones.length})</h2>
-                <button
-                  onClick={() => setGestiones([])}
-                  className="text-sm bg-red-600 hover:bg-red-700 px-3 py-1 rounded transition-colors"
-                >
-                  Limpiar Historial
-                </button>
-              </div>
-              
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-700">
-                    <tr>
-                      <th className="p-3 text-left">Candidato</th>
-                      <th className="p-3 text-left">RUT</th>
-                      <th className="p-3 text-left">Cargo</th>
-                      <th className="p-3 text-left">Estado</th>
-                      <th className="p-3 text-left">Motivo</th>
-                      <th className="p-3 text-left">Fecha/Hora</th>
+            <div className="bg-gray-800 rounded-lg p-4">
+              <h2 className="text-xl mb-4">Historial de Gestiones</h2>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-600">
+                    <th className="p-2 text-left">Nombre</th>
+                    <th className="p-2 text-left">RUT</th>
+                    <th className="p-2 text-left">Cargo</th>
+                    <th className="p-2 text-left">Estado</th>
+                    <th className="p-2 text-left">Fecha/Hora</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {gestiones.map((g, i) => (
+                    <tr key={i} className="border-b border-gray-700">
+                      <td className="p-2">{g.nombre}</td>
+                      <td className="p-2">{g.rut}</td>
+                      <td className="p-2">{g.cargo}</td>
+                      <td className="p-2">{g.reclutado === "Sí" ? "✅" : "❌"}</td>
+                      <td className="p-2">{g.fechaRegistro} {g.horaRegistro}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {gestiones.map((r, i) => (
-                      <tr key={i} className={`border-t border-gray-700 ${i % 2 === 0 ? 'bg-gray-800' : 'bg-gray-750'}`}>
-                        <td className="p-3 font-medium">{r.nombre}</td>
-                        <td className="p-3 text-sm">{r.rut}</td>
-                        <td className="p-3 text-sm">{r.cargo}</td>
-                        <td className="p-3">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            r.reclutado === 'Sí' 
-                              ? 'bg-green-600 text-white' 
-                              : 'bg-red-600 text-white'
-                          }`}>
-                            {r.reclutado === 'Sí' ? '✅ Reclutado' : '❌ Rechazado'}
-                          </span>
-                        </td>
-                        <td className="p-3 text-sm text-gray-300">{r.motivo}</td>
-                        <td className="p-3 text-sm text-gray-400">
-                          {r.fechaRegistro}<br/>
-                          {r.horaRegistro}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
-
-          {/* Modal de confirmación */}
-          <ConfirmationModal
-            isOpen={confirmModal.isOpen}
-            onClose={closeConfirmModal}
-            onConfirm={handleDecision}
-            candidato={confirmModal.candidato}
-            action={confirmModal.action}
-          />
-
-          {/* Notificaciones */}
-          <Notification
-            message={notification.message}
-            type={notification.type}
-            onClose={closeNotification}
-          />
         </div>
       );
     }
