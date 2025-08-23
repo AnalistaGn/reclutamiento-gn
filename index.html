@@ -177,7 +177,48 @@
       );
     }
 
+<<<<<<< HEAD:index.html.html
     ReactDOM.createRoot(document.getElementById("root")).render(<RecruitmentApp />);
   </script>
 </body>
 </html>
+=======
+            {/* Registros */}
+            {gestiones.length > 0 && (
+              <div className="mt-6">
+                <h2 className="text-xl font-semibold mb-2">Gestiones Registradas</h2>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm bg-gray-800 rounded">
+                    <thead>
+                      <tr>
+                        <th className="p-2 text-left">Nombre</th>
+                        <th className="p-2 text-left">RUT</th>
+                        <th className="p-2 text-left">Reclutado</th>
+                        <th className="p-2 text-left">Motivo</th>
+                        <th className="p-2 text-left">Fecha Registro</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {gestiones.map((r, i) => (
+                        <tr key={i} className="border-t border-gray-700">
+                          <td className="p-2">{r.nombre}</td>
+                          <td className="p-2">{r.rut}</td>
+                          <td className="p-2">{r.reclutado}</td>
+                          <td className="p-2">{r.motivo}</td>
+                          <td className="p-2">{r.fechaRegistro}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<RecruitmentApp />);
+    </script>
+  </body>
+</html>
+>>>>>>> de8a6ba69f11f56b0ab1637999fccd7e965dbe71:index.html
