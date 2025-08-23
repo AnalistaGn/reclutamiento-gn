@@ -18,27 +18,27 @@
     // ⚠️ Pega tu URL completa de la API de SheetDB aquí
     const SHEETDB_API_URL = "https://sheetdb.io/api/v1/arqvckj0fb8afhttps://sheetdb.io/api/v1/arqvckj0fb8af";
 
-    // 🔎 Búsqueda parcial (nombre, rut, cargo, email)
-    async function searchCandidates(query) {
-      try {
-        const sanitizedQuery = query.trim();
+ // 🔎 Búsqueda parcial (nombre, rut, cargo, email)
+async function searchCandidates(query) {
+  try {
+    const sanitizedQuery = query.trim();
 
-        // Usamos /search_or con contains para búsqueda parcial
-        const response = await fetch(
-          `${SHEETDB_API_URL}/search_or?contains=rut,nombre,cargo,email&q=${encodeURIComponent(sanitizedQuery)}`
-        );
+    // Usamos /search_or con contains para búsqueda parcial en varios campos
+    const response = await fetch(
+      `${SHEETDB_API_URL}/search_or?contains=rut,nombre,cargo,email&q=${encodeURIComponent(sanitizedQuery)}`
+    );
 
-        if (!response.ok) {
-          throw new Error(`Error ${response.status}: ${response.statusText}`);
-        }
+    if (!response.ok) {
+      throw new Error(`Error ${response.status}: ${response.statusText}`);
+    }
 
-        const data = await response.json();
-        return { success: true, data: Array.isArray(data) ? data : [] };
-      } catch (error) {
-        console.error("Error al buscar candidatos:", error);
-        return { success: false, error: error.message };
-      }
-    }
+    const data = await response.json();
+    return { success: true, data: Array.isArray(data) ? data : [] };
+  } catch (error) {
+    console.error("Error al buscar candidatos:", error);
+    return { success: false, error: error.message };
+  }
+}
 
     // 💾 Guardar decisión en la hoja
     async function saveToSheetDB(record) {
