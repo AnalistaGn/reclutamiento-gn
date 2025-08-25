@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sistema de Reclutamiento - Grupo Norte</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Librerías para descargas -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body class="min-h-screen" style="background-color:#002338;">
 
@@ -60,7 +63,17 @@
 
     <!-- Historial de Gestiones -->
     <div id="historialSection" class="bg-gray-50 rounded-lg p-4 hidden">
-      <h2 class="text-xl font-bold mb-4 text-gray-800">📊 Historial de Gestiones</h2>
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold text-gray-800">📊 Historial de Gestiones</h2>
+        <div class="flex gap-2">
+          <button id="downloadExcelBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm">
+            📊 Descargar Excel
+          </button>
+          <button id="downloadPdfBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm">
+            📄 Descargar PDF
+          </button>
+        </div>
+      </div>
       <div class="overflow-x-auto">
         <table class="w-full text-sm bg-white rounded-lg shadow">
           <thead class="bg-gray-200">
@@ -250,6 +263,19 @@
             ${candidato["ENLACE CV"] ? `<p class="mt-2"><strong>CV:</strong> <a href="${candidato["ENLACE CV"]}" target="_blank" class="underline">📄 Ver Curriculum</a></p>` : ""}
           </div>
           <div class="flex flex-col gap-2 ml-4">
+            ${candidato["ENLACE CV"] ? `
+            <button 
+              onclick="downloadCV('${candidato["ENLACE CV"]}', '${candidato.NOMBRE} ${candidato.APELLIDO}')" 
+              class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm"
+            >
+              📥 Descargar CV
+            </button>` : ""}
+            <button 
+              onclick="generateCartilla('${candidato.RUT}')" 
+              class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded text-sm"
+            >
+              📋 Cartilla PDF
+            </button>
             <button 
               onclick="handleDecision('${candidato.RUT}', true)" 
               class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
@@ -302,7 +328,268 @@
       });
     }
 
-    // 🎯 Manejar decisiones de reclutamiento
+    // 📥 Descargar CV desde enlace
+    window.downloadCV = function(enlaceCV, nombreCandidato) {
+      if (!enlaceCV) {
+        alert("❌ No hay enlace de CV disponible");
+        return;
+      }
+      
+      updateDebugInfo(`📥 Iniciando descarga de CV para ${nombreCandidato}`);
+      
+      try {
+        // Crear enlace de descarga
+        const link = document.createElement('a');
+        link.href = enlaceCV;
+        link.download = `CV_${nombreCandidato.replace(/\s+/g, '_')}.pdf`;
+        link.target = '_blank';
+        
+        // Trigger download
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        updateDebugInfo(`✅ Descarga iniciada para CV de ${nombreCandidato}`);
+      } catch (error) {
+        updateDebugInfo(`❌ Error al descargar CV: ${error.message}`);
+        alert("❌ Error al descargar el CV");
+      }
+    };
+
+    // 📋 Generar cartilla PDF del candidato
+    window.generateCartilla = async function(rutCandidato) {
+      updateDebugInfo(`📋 Generando cartilla para RUT: ${rutCandidato}`);
+      
+      try {
+        // Buscar datos del candidato
+        const response = await fetch(SHEETDB_API_URL);
+        const allData = await response.json();
+        const candidato = allData.find(c => c.RUT === rutCandidato);
+        
+        if (!candidato) {
+          alert("❌ No se encontraron datos del candidato");
+          return;
+        }
+
+        // Crear PDF con jsPDF
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Header con logos (simulado)
+        doc.setFillColor(0, 35, 56); // Color Grupo Norte
+        doc.rect(0, 0, 210, 30, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(20);
+        doc.text('GRUPO NORTE', 20, 20);
+        doc.setFontSize(12);
+        doc.text('Sistema de Reclutamiento', 150, 20);
+        
+        // Título
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(16);
+        doc.text('CARTILLA DE CANDIDATO', 20, 50);
+        
+        // Información del candidato
+        let yPos = 70;
+        const lineHeight = 8;
+        
+        const campos = [
+          ['Nombre Completo', `${candidato.NOMBRE || ''} ${candidato.APELLIDO || ''}`],
+          ['RUT', candidato.RUT || 'N/A'],
+          ['Cargo Postulado', candidato.CARGO || 'N/A'],
+          ['Email', candidato.EMAIL || 'N/A'],
+          ['Teléfono', candidato.TELEFONO || 'N/A'],
+          ['Comuna', candidato.COMUNA || 'N/A'],
+          ['Empresa Anterior', candidato.EMPRESA || 'N/A'],
+          ['Fecha de Postulación', candidato["FECHA DE POSTULACION"] || 'N/A'],
+          ['Cumple con Perfil', candidato["CUMPLE CON EL PERFIL"] || 'N/A'],
+          ['Antecedentes', candidato.ANTECEDENTES || 'N/A'],
+          ['Observaciones', candidato.OBSERVACIONES || 'N/A']
+        ];
+        
+        doc.setFontSize(12);
+        campos.forEach(([campo, valor]) => {
+          doc.setFont(undefined, 'bold');
+          doc.text(`${campo}:`, 20, yPos);
+          doc.setFont(undefined, 'normal');
+          
+          // Manejar texto largo
+          const maxWidth = 160;
+          const splitText = doc.splitTextToSize(valor.toString(), maxWidth);
+          doc.text(splitText, 70, yPos);
+          
+          yPos += lineHeight * splitText.length;
+          
+          // Nueva página si es necesario
+          if (yPos > 270) {
+            doc.addPage();
+            yPos = 20;
+          }
+        });
+        
+        // Footer
+        const fechaGeneracion = new Date().toLocaleDateString('es-CL');
+        const horaGeneracion = new Date().toLocaleTimeString('es-CL');
+        
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Cartilla generada el ${fechaGeneracion} a las ${horaGeneracion}`, 20, yPos + 20);
+        
+        // Descargar PDF
+        const nombreArchivo = `Cartilla_${candidato.NOMBRE}_${candidato.APELLIDO}_${candidato.RUT}.pdf`.replace(/\s+/g, '_');
+        doc.save(nombreArchivo);
+        
+        updateDebugInfo(`✅ Cartilla PDF generada: ${nombreArchivo}`);
+        
+      } catch (error) {
+        updateDebugInfo(`❌ Error al generar cartilla: ${error.message}`);
+        alert("❌ Error al generar la cartilla PDF");
+      }
+    };
+
+    // 📊 Descargar historial en Excel
+    function downloadExcel() {
+      if (gestiones.length === 0) {
+        alert("❌ No hay gestiones para descargar");
+        return;
+      }
+      
+      updateDebugInfo(`📊 Generando archivo Excel con ${gestiones.length} gestiones`);
+      
+      try {
+        // Preparar datos para Excel
+        const excelData = gestiones.map(gestion => ({
+          'Nombre': gestion.nombre,
+          'RUT': gestion.rut,
+          'Cargo': gestion.cargo,
+          'Email': gestion.email,
+          'Teléfono': gestion.telefono,
+          'Comuna': gestion.comuna,
+          'Empresa': gestion.empresa,
+          'Fecha Postulación': gestion.fechaPostulacion,
+          'Estado': gestion.reclutado,
+          'Motivo': gestion.motivo,
+          'Fecha Registro': gestion.fechaRegistro,
+          'Hora Registro': gestion.horaRegistro
+        }));
+        
+        // Crear workbook
+        const ws = XLSX.utils.json_to_sheet(excelData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Gestiones de Reclutamiento");
+        
+        // Ajustar ancho de columnas
+        const colWidths = [
+          { wch: 25 }, // Nombre
+          { wch: 12 }, // RUT
+          { wch: 20 }, // Cargo
+          { wch: 25 }, // Email
+          { wch: 12 }, // Teléfono
+          { wch: 15 }, // Comuna
+          { wch: 20 }, // Empresa
+          { wch: 12 }, // Fecha Postulación
+          { wch: 10 }, // Estado
+          { wch: 30 }, // Motivo
+          { wch: 12 }, // Fecha Registro
+          { wch: 10 }  // Hora Registro
+        ];
+        ws['!cols'] = colWidths;
+        
+        // Generar nombre de archivo
+        const fecha = new Date().toISOString().split('T')[0];
+        const nombreArchivo = `Historial_Reclutamiento_${fecha}.xlsx`;
+        
+        // Descargar
+        XLSX.writeFile(wb, nombreArchivo);
+        
+        updateDebugInfo(`✅ Archivo Excel descargado: ${nombreArchivo}`);
+        
+      } catch (error) {
+        updateDebugInfo(`❌ Error al generar Excel: ${error.message}`);
+        alert("❌ Error al generar el archivo Excel");
+      }
+    }
+
+    // 📄 Descargar historial en PDF
+    function downloadPDF() {
+      if (gestiones.length === 0) {
+        alert("❌ No hay gestiones para descargar");
+        return;
+      }
+      
+      updateDebugInfo(`📄 Generando PDF con ${gestiones.length} gestiones`);
+      
+      try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Header
+        doc.setFillColor(0, 35, 56);
+        doc.rect(0, 0, 210, 25, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(16);
+        doc.text('GRUPO NORTE - HISTORIAL DE RECLUTAMIENTO', 20, 17);
+        
+        // Fecha de generación
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(10);
+        const fechaHoy = new Date().toLocaleDateString('es-CL');
+        doc.text(`Generado el: ${fechaHoy}`, 20, 35);
+        doc.text(`Total de gestiones: ${gestiones.length}`, 20, 42);
+        
+        let yPos = 55;
+        const pageHeight = 280;
+        
+        gestiones.forEach((gestion, index) => {
+          // Nueva página si es necesario
+          if (yPos > pageHeight - 40) {
+            doc.addPage();
+            yPos = 20;
+          }
+          
+          // Separador
+          doc.setDrawColor(200, 200, 200);
+          doc.line(20, yPos, 190, yPos);
+          yPos += 5;
+          
+          // Datos del candidato
+          doc.setFontSize(12);
+          doc.setFont(undefined, 'bold');
+          doc.text(`${index + 1}. ${gestion.nombre}`, 20, yPos);
+          yPos += 7;
+          
+          doc.setFontSize(10);
+          doc.setFont(undefined, 'normal');
+          
+          const info = [
+            `RUT: ${gestion.rut}`,
+            `Cargo: ${gestion.cargo}`,
+            `Email: ${gestion.email}`,
+            `Estado: ${gestion.reclutado}`,
+            `Motivo: ${gestion.motivo}`,
+            `Fecha: ${gestion.fechaRegistro} ${gestion.horaRegistro}`
+          ];
+          
+          info.forEach(texto => {
+            doc.text(texto, 25, yPos);
+            yPos += 5;
+          });
+          
+          yPos += 3;
+        });
+        
+        // Descargar
+        const nombreArchivo = `Historial_Reclutamiento_${fechaHoy.replace(/\//g, '-')}.pdf`;
+        doc.save(nombreArchivo);
+        
+        updateDebugInfo(`✅ PDF descargado: ${nombreArchivo}`);
+        
+      } catch (error) {
+        updateDebugInfo(`❌ Error al generar PDF: ${error.message}`);
+        alert("❌ Error al generar el archivo PDF");
+      }
+    }
     window.handleDecision = async function(rutCandidato, reclutado) {
       const motivo = prompt(
         reclutado ? 
@@ -349,6 +636,10 @@
     });
 
     document.getElementById("clearDebugBtn").addEventListener("click", clearDebugInfo);
+
+    // Event listeners para descargas
+    document.getElementById("downloadExcelBtn").addEventListener("click", downloadExcel);
+    document.getElementById("downloadPdfBtn").addEventListener("click", downloadPDF);
 
     document.getElementById("searchBtn").addEventListener("click", async () => {
       const query = document.getElementById("searchInput").value;
