@@ -19,38 +19,94 @@
   </header>
 
   <!-- Contenido principal -->
-  <main class="max-w-5xl mx-auto bg-white shadow-lg rounded-xl p-6 mt-6">
+  <main class="max-w-6xl mx-auto bg-white shadow-lg rounded-xl p-6 mt-6">
     <h1 class="text-2xl font-bold mb-4 text-center text-gray-800">📋 Sistema de Reclutamiento</h1>
 
-    <!-- Debug Panel -->
-    <div class="bg-gray-100 p-4 rounded-lg mb-4">
-      <h3 class="font-bold text-gray-700 mb-2">🔧 Panel de Debug</h3>
-      <div id="debugInfo" class="text-sm text-gray-600"></div>
+    <!-- Panel de Debug desplegable -->
+    <div class="bg-gray-100 rounded-lg mb-4 overflow-hidden">
+      <div class="p-3 bg-gray-200 cursor-pointer flex justify-between items-center" onclick="toggleDebugPanel()">
+        <h3 class="font-bold text-gray-700">🔧 Panel de Debug</h3>
+        <span id="debugArrow" class="transform transition-transform">▼</span>
+      </div>
+      <div id="debugContent" class="p-4 hidden">
+        <div id="debugInfo" class="text-sm text-gray-600 max-h-40 overflow-y-auto"></div>
+        <button id="testApiBtn" class="bg-blue-500 text-white px-4 py-2 rounded mt-2 hover:bg-blue-600">
+          🔍 Probar conexión a API
+        </button>
+        <button id="clearDebugBtn" class="bg-gray-500 text-white px-4 py-2 rounded mt-2 ml-2 hover:bg-gray-600">
+          🗑️ Limpiar Log
+        </button>
+      </div>
     </div>
 
     <!-- Input de búsqueda -->
-    <input 
-      type="text" 
-      id="searchInput" 
-      placeholder="Escribe nombre, RUT, cargo, email, teléfono o fecha..." 
-      class="w-full p-3 border rounded-lg mb-6 focus:ring focus:ring-green-300"
-    />
-
-    <!-- Botón de test API -->
-    <button id="testApiBtn" class="bg-blue-500 text-white px-4 py-2 rounded mb-4 hover:bg-blue-600">
-      🔍 Probar conexión a API
-    </button>
+    <div class="mb-6 flex gap-2">
+      <input 
+        type="text" 
+        id="searchInput" 
+        placeholder="Escribe nombre, RUT, cargo, email, teléfono, comuna, empresa o fecha..." 
+        class="flex-grow p-3 border rounded-lg focus:ring focus:ring-green-300"
+      />
+      <button id="searchBtn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded">
+        🔍 Buscar
+      </button>
+    </div>
 
     <!-- Resultados -->
-    <div id="results" class="space-y-3"></div>
+    <div class="bg-gray-50 rounded-lg p-4 mb-6">
+      <h2 class="text-xl font-bold mb-4 text-gray-800">Candidatos Encontrados</h2>
+      <div id="results" class="space-y-3"></div>
+    </div>
+
+    <!-- Historial de Gestiones -->
+    <div id="historialSection" class="bg-gray-50 rounded-lg p-4 hidden">
+      <h2 class="text-xl font-bold mb-4 text-gray-800">📊 Historial de Gestiones</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm bg-white rounded-lg shadow">
+          <thead class="bg-gray-200">
+            <tr>
+              <th class="p-3 text-left">Nombre</th>
+              <th class="p-3 text-left">RUT</th>
+              <th class="p-3 text-left">Cargo</th>
+              <th class="p-3 text-left">Estado</th>
+              <th class="p-3 text-left">Motivo</th>
+              <th class="p-3 text-left">Fecha/Hora</th>
+            </tr>
+          </thead>
+          <tbody id="historialBody">
+          </tbody>
+        </table>
+      </div>
+    </div>
   </main>
 
   <script>
     const SHEETDB_API_URL = "https://sheetdb.io/api/v1/arqvckj0fb8af";
+    const DECISIONS_API_URL = "https://sheetdb.io/api/v1/arqvckj0fb8af"; // Para guardar decisiones
+    let gestiones = [];
+
+    // 🔧 Panel de Debug
+    function toggleDebugPanel() {
+      const content = document.getElementById("debugContent");
+      const arrow = document.getElementById("debugArrow");
+      
+      if (content.classList.contains("hidden")) {
+        content.classList.remove("hidden");
+        arrow.style.transform = "rotate(180deg)";
+      } else {
+        content.classList.add("hidden");
+        arrow.style.transform = "rotate(0deg)";
+      }
+    }
 
     function updateDebugInfo(message) {
       const debugDiv = document.getElementById("debugInfo");
-      debugDiv.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
+      debugDiv.innerHTML += `<div class="mb-1">${new Date().toLocaleTimeString()}: ${message}</div>`;
+      debugDiv.scrollTop = debugDiv.scrollHeight;
+    }
+
+    function clearDebugInfo() {
+      document.getElementById("debugInfo").innerHTML = "";
     }
 
     // 🔧 Función para probar la API
@@ -120,7 +176,47 @@
       }
     }
 
-    // 🎨 Renderizar resultados
+    // 💾 Guardar decisión de reclutamiento
+    async function saveDecision(candidato, reclutado, motivo = "") {
+      updateDebugInfo(`💾 Guardando decisión para ${candidato.NOMBRE} ${candidato.APELLIDO}`);
+      
+      const record = {
+        nombre: `${candidato.NOMBRE || ""} ${candidato.APELLIDO || ""}`.trim(),
+        rut: candidato.RUT || "N/A",
+        cargo: candidato.CARGO || "N/A",
+        email: candidato.EMAIL || "N/A",
+        telefono: candidato.TELEFONO || "N/A",
+        comuna: candidato.COMUNA || "N/A",
+        empresa: candidato.EMPRESA || "N/A",
+        fechaPostulacion: candidato["FECHA DE POSTULACION"] || "N/A",
+        reclutado: reclutado ? "SÍ" : "NO",
+        motivo: motivo || (reclutado ? "Aprobado en proceso" : "No cumple requisitos"),
+        fechaRegistro: new Date().toLocaleDateString("es-CL"),
+        horaRegistro: new Date().toLocaleTimeString("es-CL", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+
+      try {
+        // Aquí podrías enviar a una hoja separada o a la misma
+        // const response = await fetch(DECISIONS_API_URL, {
+        //   method: "POST",
+        //   headers: { "Content-Type": "application/json" },
+        //   body: JSON.stringify(record),
+        // });
+
+        // Por ahora solo lo guardamos localmente
+        gestiones.unshift(record);
+        updateDebugInfo(`✅ Decisión guardada: ${reclutado ? "RECLUTADO" : "RECHAZADO"}`);
+        return { success: true };
+      } catch (error) {
+        updateDebugInfo(`❌ Error al guardar decisión: ${error.message}`);
+        return { success: false, error: error.message };
+      }
+    }
+
+    // 🎨 Renderizar resultados con botones de decisión
     function renderResults(data) {
       const resultsDiv = document.getElementById("results");
       resultsDiv.innerHTML = "";
@@ -132,34 +228,144 @@
 
       data.forEach(candidato => {
         const card = document.createElement("div");
-        card.className = "p-4 rounded-lg shadow-sm text-white";
+        card.className = "p-4 rounded-lg shadow-sm text-white flex justify-between items-center";
         card.style.backgroundColor = "#77c25c";
 
         card.innerHTML = `
-          <p><strong>Nombre:</strong> ${candidato.NOMBRE || "-"} ${candidato.APELLIDO || ""}</p>
-          <p><strong>RUT:</strong> ${candidato.RUT || "-"}</p>
-          <p><strong>Cargo:</strong> ${candidato.CARGO || "-"}</p>
-          <p><strong>Email:</strong> ${candidato.EMAIL || "-"}</p>
-          <p><strong>Teléfono:</strong> ${candidato.TELEFONO || "-"}</p>
-          <p><strong>Comuna:</strong> ${candidato.COMUNA || "-"}</p>
-          <p><strong>Empresa:</strong> ${candidato.EMPRESA || "-"}</p>
-          <p><strong>Fecha Postulación:</strong> ${candidato["FECHA DE POSTULACION"] || "-"}</p>
+          <div class="flex-grow">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <p><strong>Nombre:</strong> ${candidato.NOMBRE || "-"} ${candidato.APELLIDO || ""}</p>
+                <p><strong>RUT:</strong> ${candidato.RUT || "-"}</p>
+                <p><strong>Cargo:</strong> ${candidato.CARGO || "-"}</p>
+                <p><strong>Email:</strong> ${candidato.EMAIL || "-"}</p>
+              </div>
+              <div>
+                <p><strong>Teléfono:</strong> ${candidato.TELEFONO || "-"}</p>
+                <p><strong>Comuna:</strong> ${candidato.COMUNA || "-"}</p>
+                <p><strong>Empresa:</strong> ${candidato.EMPRESA || "-"}</p>
+                <p><strong>Fecha Postulación:</strong> ${candidato["FECHA DE POSTULACION"] || "-"}</p>
+              </div>
+            </div>
+            ${candidato["ENLACE CV"] ? `<p class="mt-2"><strong>CV:</strong> <a href="${candidato["ENLACE CV"]}" target="_blank" class="underline">📄 Ver Curriculum</a></p>` : ""}
+          </div>
+          <div class="flex flex-col gap-2 ml-4">
+            <button 
+              onclick="handleDecision('${candidato.RUT}', true)" 
+              class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
+            >
+              ✅ Reclutar
+            </button>
+            <button 
+              onclick="handleDecision('${candidato.RUT}', false)" 
+              class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm"
+            >
+              ❌ Rechazar
+            </button>
+          </div>
         `;
         resultsDiv.appendChild(card);
       });
     }
 
+    // 📊 Renderizar historial
+    function renderHistorial() {
+      const historialBody = document.getElementById("historialBody");
+      const historialSection = document.getElementById("historialSection");
+      
+      if (gestiones.length === 0) {
+        historialSection.classList.add("hidden");
+        return;
+      }
+
+      historialSection.classList.remove("hidden");
+      historialBody.innerHTML = "";
+
+      gestiones.forEach(gestion => {
+        const row = document.createElement("tr");
+        row.className = "border-b border-gray-200 hover:bg-gray-50";
+        
+        row.innerHTML = `
+          <td class="p-3">${gestion.nombre}</td>
+          <td class="p-3">${gestion.rut}</td>
+          <td class="p-3">${gestion.cargo}</td>
+          <td class="p-3">
+            <span class="px-2 py-1 rounded text-xs ${gestion.reclutado === 'SÍ' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}">
+              ${gestion.reclutado === 'SÍ' ? '✅ Reclutado' : '❌ Rechazado'}
+            </span>
+          </td>
+          <td class="p-3">${gestion.motivo}</td>
+          <td class="p-3">${gestion.fechaRegistro} ${gestion.horaRegistro}</td>
+        `;
+        
+        historialBody.appendChild(row);
+      });
+    }
+
+    // 🎯 Manejar decisiones de reclutamiento
+    window.handleDecision = async function(rutCandidato, reclutado) {
+      const motivo = prompt(
+        reclutado ? 
+        "Ingresa el motivo de la aprobación (opcional):" : 
+        "Ingresa el motivo del rechazo (opcional):"
+      );
+      
+      if (motivo === null) return; // Usuario canceló
+
+      // Buscar el candidato en los resultados actuales
+      const resultsDiv = document.getElementById("results");
+      const candidatos = await searchCandidates(document.getElementById("searchInput").value);
+      
+      if (candidatos.success) {
+        const candidato = candidatos.data.find(c => c.RUT === rutCandidato);
+        
+        if (candidato) {
+          const result = await saveDecision(candidato, reclutado, motivo);
+          
+          if (result.success) {
+            // Remover de resultados
+            renderResults(candidatos.data.filter(c => c.RUT !== rutCandidato));
+            // Actualizar historial
+            renderHistorial();
+            
+            const mensaje = reclutado ? "Candidato reclutado exitosamente" : "Candidato rechazado";
+            alert(`✅ ${mensaje}`);
+          } else {
+            alert(`❌ Error al procesar decisión: ${result.error}`);
+          }
+        }
+      }
+    };
+
     // Event Listeners
     document.getElementById("testApiBtn").addEventListener("click", async () => {
-      document.getElementById("debugInfo").innerHTML = "";
+      clearDebugInfo();
       try {
         const data = await testAPI();
-        renderResults(data);
+        renderResults(data.slice(0, 5)); // Mostrar primeros 5 como ejemplo
       } catch (error) {
         document.getElementById("results").innerHTML = `<p class="text-red-500">❌ Error: ${error.message}</p>`;
       }
     });
 
+    document.getElementById("clearDebugBtn").addEventListener("click", clearDebugInfo);
+
+    document.getElementById("searchBtn").addEventListener("click", async () => {
+      const query = document.getElementById("searchInput").value;
+      if (query.length < 2) {
+        document.getElementById("results").innerHTML = `<p class="text-gray-400">Escribe al menos 2 caracteres...</p>`;
+        return;
+      }
+
+      const result = await searchCandidates(query);
+      if (result.success) {
+        renderResults(result.data);
+      } else {
+        document.getElementById("results").innerHTML = `<p class="text-red-500">❌ Error: ${result.error}</p>`;
+      }
+    });
+
+    // Búsqueda en tiempo real
     document.getElementById("searchInput").addEventListener("input", async (e) => {
       const query = e.target.value;
       if (query.length < 2) {
@@ -175,9 +381,17 @@
       }
     });
 
-    // Cargar datos iniciales al cargar la página
+    // Búsqueda con Enter
+    document.getElementById("searchInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        document.getElementById("searchBtn").click();
+      }
+    });
+
+    // Inicializar
     window.addEventListener('load', () => {
-      updateDebugInfo("🚀 Sistema iniciado");
+      updateDebugInfo("🚀 Sistema de Reclutamiento iniciado");
+      renderHistorial();
     });
   </script>
 </body>
