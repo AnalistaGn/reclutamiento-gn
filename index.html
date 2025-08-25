@@ -20,24 +20,25 @@
 
  // 🔎 Búsqueda parcial (nombre, rut, cargo, email)
 async function searchCandidates(query) {
-  try {
-    const sanitizedQuery = query.trim();
+  try {
+    const sanitizedQuery = query.trim();
 
-    // Usamos /search_or con contains para búsqueda parcial en varios campos
-    const response = await fetch(
-      `${SHEETDB_API_URL}/search_or?contains=rut,nombre,cargo,email&q=${encodeURIComponent(sanitizedQuery)}`
-    );
+    // Construir la URL de búsqueda correcta para la API de SheetDB
+    const queryURL = 
+      `${SHEETDB_API_URL}/search_or?rut=${encodeURIComponent(sanitizedQuery)}&nombre=${encodeURIComponent(sanitizedQuery)}&cargo=${encodeURIComponent(sanitizedQuery)}&email=${encodeURIComponent(sanitizedQuery)}`;
 
-    if (!response.ok) {
-      throw new Error(`Error ${response.status}: ${response.statusText}`);
-    }
+    const response = await fetch(queryURL);
 
-    const data = await response.json();
-    return { success: true, data: Array.isArray(data) ? data : [] };
-  } catch (error) {
-    console.error("Error al buscar candidatos:", error);
-    return { success: false, error: error.message };
-  }
+    if (!response.ok) {
+      throw new Error(`Error ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return { success: true, data: Array.isArray(data) ? data : [] };
+  } catch (error) {
+    console.error("Error al buscar candidatos:", error);
+    return { success: false, error: error.message };
+  }
 }
 
     // 💾 Guardar decisión en la hoja
