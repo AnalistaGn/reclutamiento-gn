@@ -5,13 +5,31 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sistema de Reclutamiento - Grupo Norte</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Librerías para descargas -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    /* Estilos para el modal de la ficha de postulación */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+  </style>
 </head>
 <body class="min-h-screen" style="background-color:#002338;">
 
-  <!-- 🔝 Header con fondo oscuro y logos -->
   <header class="w-full py-4" style="background-color:#002338;">
     <div class="max-w-5xl mx-auto flex justify-center items-center gap-6">
       <img src="https://github.com/AnalistaGn/dashboard-gn-e/blob/main/Grupo%20%5E%20Norte_%20Creamos%20.png?raw=true" 
@@ -21,11 +39,9 @@
     </div>
   </header>
 
-  <!-- Contenido principal -->
   <main class="max-w-6xl mx-auto bg-white shadow-lg rounded-xl p-6 mt-6">
     <h1 class="text-2xl font-bold mb-4 text-center text-gray-800">📋 Sistema de Reclutamiento</h1>
 
-    <!-- Panel de Debug desplegable -->
     <div class="bg-gray-100 rounded-lg mb-4 overflow-hidden">
       <div class="p-3 bg-gray-200 cursor-pointer flex justify-between items-center" onclick="toggleDebugPanel()">
         <h3 class="font-bold text-gray-700">🔧 Panel de Debug</h3>
@@ -42,7 +58,6 @@
       </div>
     </div>
 
-    <!-- Input de búsqueda -->
     <div class="mb-6 flex gap-2">
       <input 
         type="text" 
@@ -55,13 +70,11 @@
       </button>
     </div>
 
-    <!-- Resultados -->
     <div class="bg-gray-50 rounded-lg p-4 mb-6">
       <h2 class="text-xl font-bold mb-4 text-gray-800">Candidatos Encontrados</h2>
       <div id="results" class="space-y-3"></div>
     </div>
 
-    <!-- Historial de Gestiones -->
     <div id="historialSection" class="bg-gray-50 rounded-lg p-4 hidden">
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-xl font-bold text-gray-800">📊 Historial de Gestiones</h2>
@@ -92,11 +105,386 @@
       </div>
     </div>
   </main>
+  
+  <div id="formularioModal" class="modal-overlay hidden">
+    <div class="modal-content bg-white text-black p-6 rounded-lg shadow-xl w-full max-w-4xl relative">
+      <div class="absolute top-3 right-4 flex gap-2">
+        <button id="downloadFichaBtn" onclick="downloadFichaPDF()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm">
+            📄 Descargar Ficha
+        </button>
+        <button onclick="hideApplicationForm()" class="text-gray-600 hover:text-black text-2xl font-bold leading-none">&times;</button>
+      </div>
+
+      <div id="formularioPostulacion">
+        <div class="border-2 border-black bg-white">
+          <div class="flex items-center border-b-2 border-black">
+            <div class="p-4 border-r-2 border-black">
+              <div class="font-bold text-lg">GRUPO NORTE</div>
+            </div>
+            <div class="flex-1 text-center p-4">
+              <div class="font-bold">FICHA DE POSTULACIÓN E INGRESO</div>
+              <div class="text-sm">SELECCIÓN Y RECLUTAMIENTO</div>
+            </div>
+            <div class="p-4 border-l-2 border-black text-sm">
+              <div>FE-06</div>
+              <div>Versión: 04</div>
+              <div>Fecha: 13-03-2025</div>
+            </div>
+          </div>
+
+          <div class="p-4 space-y-4">
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span class="font-bold">Fecha de Postulación:</span>
+                <span id="form-fecha-postulacion" class="ml-2 border-b border-black inline-block w-32 text-center"></span>
+              </div>
+              <div>
+                <span class="font-bold">Cargo:</span>
+                <span id="form-cargo" class="ml-2 border-b border-black inline-block w-40 text-center"></span>
+              </div>
+            </div>
+
+            <div class="text-sm">
+              <span class="font-bold">NOMBRE COMPLETO:</span>
+              <span id="form-nombre" class="ml-2 border-b border-black inline-block w-80 text-center"></span>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <span class="font-bold">RUT:</span>
+                <span id="form-rut" class="ml-2 border-b border-black inline-block w-28 text-center"></span>
+              </div>
+              <div>
+                <span class="font-bold">Estado Civil:</span>
+                <span id="form-estado-civil" class="ml-2 border-b border-black inline-block w-24 text-center"></span>
+              </div>
+              <div>
+                <span class="font-bold">Fecha de Nacimiento:</span>
+                <span id="form-fecha-nacimiento" class="ml-2 border-b border-black inline-block w-28 text-center"></span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-4 gap-4 text-sm">
+              <div>
+                <span class="font-bold">Edad:</span>
+                <span id="form-edad" class="ml-2 border-b border-black inline-block w-12 text-center"></span>
+              </div>
+              <div>
+                <span class="font-bold">Nacionalidad:</span>
+                <span id="form-nacionalidad" class="ml-2 border-b border-black inline-block w-20 text-center"></span>
+              </div>
+              <div>
+                <span class="font-bold">Visa:</span>
+                <span id="form-visa" class="ml-2 border-b border-black inline-block w-20 text-center"></span>
+              </div>
+              <div>
+                <span class="font-bold">N° Cargas Familiares:</span>
+                <span id="form-cargas" class="ml-2 border-b border-black inline-block w-12 text-center"></span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span class="font-bold">Dirección:</span>
+                <span id="form-direccion" class="ml-2 border-b border-black inline-block w-48 text-center"></span>
+              </div>
+              <div>
+                <span class="font-bold">Casa o Dpto.:</span>
+                <span class="ml-2 border-b border-black inline-block w-32"></span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <span class="font-bold">Población o Villa:</span>
+                <span id="form-poblacion" class="ml-2 border-b border-black inline-block w-32 text-center"></span>
+              </div>
+              <div>
+                <span class="font-bold">Comuna:</span>
+                <span id="form-comuna" class="ml-2 border-b border-black inline-block w-32 text-center"></span>
+              </div>
+              <div>
+                <span class="font-bold">Ciudad:</span>
+                <span id="form-ciudad" class="ml-2 border-b border-black inline-block w-32 text-center"></span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span class="font-bold">Celular Personal:</span>
+                <span id="form-telefono" class="ml-2 border-b border-black inline-block w-32 text-center"></span>
+              </div>
+              <div>
+                <span class="font-bold">Correo Electrónico:</span>
+                <span id="form-email" class="ml-2 border-b border-black inline-block w-48 text-center"></span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span class="font-bold">Celular emergencia:</span>
+                <span class="ml-2 border-b border-black inline-block w-32"></span>
+              </div>
+              <div>
+                <span class="font-bold">Nombre Emergencia:</span>
+                <span class="ml-2 border-b border-black inline-block w-48"></span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <span class="font-bold">BANCO:</span>
+                <span class="ml-2 border-b border-black inline-block w-32"></span>
+              </div>
+              <div>
+                <span class="font-bold">TIPO DE CUENTA:</span>
+                <span class="ml-2 border-b border-black inline-block w-32"></span>
+              </div>
+              <div>
+                <span class="font-bold">N° DE CUENTA:</span>
+                <span class="ml-2 border-b border-black inline-block w-32"></span>
+              </div>
+            </div>
+
+            <div class="space-y-2 text-sm">
+              <div>
+                <span class="font-bold">Tiene algún tipo de discapacidad:</span>
+                <span class="ml-4">SI ☐ NO ☐</span>
+                <span class="ml-4 font-bold">¿Cuál?</span>
+                <span class="ml-2 border-b border-black inline-block w-32"></span>
+              </div>
+              <div>
+                <span class="font-bold">¿Tiene credencial de discapacidad?</span>
+                <span class="ml-4">SI ☐ NO ☐</span>
+              </div>
+            </div>
+
+            <div class="space-y-2 text-sm">
+              <div>
+                <span class="font-bold">Posee Curso OS 10 Vigente:</span>
+                <span class="ml-4">SI ☐ NO ☐</span>
+                <span class="ml-4 font-bold">Otros Cursos:</span>
+                <span class="ml-2 border-b border-black inline-block w-48"></span>
+              </div>
+              <div>
+                <span class="font-bold">Experiencia en maquinaria de limpieza:</span>
+                <span class="ml-4">SI ☐ NO ☐</span>
+                <span class="ml-4 font-bold">¿Cuál?</span>
+                <span class="ml-2 border-b border-black inline-block w-48"></span>
+              </div>
+            </div>
+
+            <div class="text-sm">
+              <span class="font-bold">Turno que desea trabajar: (Marque con una X)</span>
+              <span class="ml-4">Día ☐ Noche ☐</span>
+            </div>
+
+            <div class="border-t-2 border-black pt-4">
+              <div class="font-bold text-sm mb-2">EXPERIENCIA LABORAL</div>
+              <div class="grid grid-cols-4 gap-4 text-sm border-b border-black pb-2">
+                <div class="font-bold">Nombre de la Empresa</div>
+                <div class="font-bold">Cargo anterior</div>
+                <div class="font-bold">Última renta</div>
+                <div class="font-bold">Causa de Retiro</div>
+              </div>
+              <div class="grid grid-cols-4 gap-4 text-sm pt-2">
+                <div class="border-b border-black h-8"></div>
+                <div class="border-b border-black h-8"></div>
+                <div class="border-b border-black h-8">$</div>
+                <div class="border-b border-black h-8"></div>
+              </div>
+            </div>
+
+            <div class="border-t border-black pt-4">
+              <div class="font-bold text-sm mb-2">Recomendaciones</div>
+              <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span class="font-bold">Nombre y Apellido:</span>
+                  <span class="ml-2 border-b border-black inline-block w-48"></span>
+                </div>
+                <div>
+                  <span class="font-bold">Teléfono:</span>
+                  <span class="ml-2 border-b border-black inline-block w-32"></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="border-t border-black pt-4">
+              <div class="font-bold text-sm mb-2">ANTECEDENTES PREVISIONALES</div>
+              <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>ISAPRE ☐</div>
+                <div>FONASA ☐</div>
+                <div>A.F.P. ☐</div>
+                <div>I.N.P. ☐</div>
+              </div>
+            </div>
+
+            <div class="border-t border-black pt-4">
+              <div class="font-bold text-sm mb-2">OTROS DATOS PERSONALES</div>
+              <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span class="font-bold">TALLA DE POLERA:</span>
+                  <span class="ml-2 border-b border-black inline-block w-16"></span>
+                </div>
+                <div>
+                  <span class="font-bold">OTRAS ESPECIFICACIONES:</span>
+                  <span class="ml-2 border-b border-black inline-block w-32"></span>
+                </div>
+                <div>
+                  <span class="font-bold">TALLA DE PANTALON:</span>
+                  <span class="ml-2 border-b border-black inline-block w-16"></span>
+                </div>
+                <div>
+                  <span class="font-bold">N° DE CALZADO:</span>
+                  <span class="ml-2 border-b border-black inline-block w-16"></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="border-t border-black pt-4 text-xs">
+              <p class="mb-2">
+                Las funciones que realizará en la empresa, en algunos casos, exige esfuerzos que pueden resultar perjudiciales
+                para su salud, le pedimos indicar si padece de alguna(s) de la(s) afección(es): (Marque con una X sólo si
+                corresponde, de lo contrario no haga ninguna marca)
+              </p>
+              <div class="grid grid-cols-3 gap-4 text-sm">
+                <div>Lumbago ☐</div>
+                <div>Artritis ☐</div>
+                <div>Presión Arterial ☐</div>
+                <div>Hernias y/o Várices ☐</div>
+                <div class="col-span-2">
+                  <span class="font-bold">Otras Afecciones, ¿cuál?</span>
+                  <span class="ml-2 border-b border-black inline-block w-48"></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="border-t border-black pt-4 text-center">
+              <div class="text-sm">
+                <span class="font-bold">Firma del Postulante:</span>
+                <span class="ml-4 border-b border-black inline-block w-64"></span>
+              </div>
+            </div>
+            
+            <div class="border-t-4 border-black mt-8 pt-6">
+              <div class="text-center mb-6">
+                <div class="font-bold text-lg">FICHA DE POSTULACIÓN E INGRESO</div>
+                <div class="text-sm">SELECCIÓN Y RECLUTAMIENTO</div>
+                <div class="text-xs mt-2">FE-06 | Versión: 04 | Fecha: 13-03-2025</div>
+              </div>
+
+              <div class="grid grid-cols-3 gap-4 text-sm mb-6">
+                <div>
+                  <span class="font-bold">Fecha de Contratación:</span>
+                  <span class="ml-2 border-b border-black inline-block w-32"></span>
+                </div>
+                <div>
+                  <span class="font-bold">Cliente:</span>
+                  <span class="ml-2 border-b border-black inline-block w-32"></span>
+                </div>
+                <div>
+                  <span class="font-bold">Instalación:</span>
+                  <span class="ml-2 border-b border-black inline-block w-32"></span>
+                </div>
+              </div>
+
+              <div class="mb-6">
+                <div class="font-bold text-sm mb-2">JORNADA LABORAL</div>
+                <div class="border border-black">
+                  <div class="grid grid-cols-4 gap-0 bg-gray-100 border-b border-black">
+                    <div class="border-r border-black p-2 font-bold text-center">DIA</div>
+                    <div class="border-r border-black p-2 font-bold text-center">ENTRADA</div>
+                    <div class="border-r border-black p-2 font-bold text-center">COLACION</div>
+                    <div class="p-2 font-bold text-center">SALIDA</div>
+                  </div>
+                  <div class="grid grid-cols-4 gap-0 border-b border-black text-sm"><div class="border-r border-black p-2 font-medium">LUNES</div><div class="border-r border-black p-2"></div><div class="border-r border-black p-2"></div><div class="p-2"></div></div>
+                  <div class="grid grid-cols-4 gap-0 border-b border-black text-sm"><div class="border-r border-black p-2 font-medium">MARTES</div><div class="border-r border-black p-2"></div><div class="border-r border-black p-2"></div><div class="p-2"></div></div>
+                  <div class="grid grid-cols-4 gap-0 border-b border-black text-sm"><div class="border-r border-black p-2 font-medium">MIERCOLES</div><div class="border-r border-black p-2"></div><div class="border-r border-black p-2"></div><div class="p-2"></div></div>
+                  <div class="grid grid-cols-4 gap-0 border-b border-black text-sm"><div class="border-r border-black p-2 font-medium">JUEVES</div><div class="border-r border-black p-2"></div><div class="border-r border-black p-2"></div><div class="p-2"></div></div>
+                  <div class="grid grid-cols-4 gap-0 border-b border-black text-sm"><div class="border-r border-black p-2 font-medium">VIERNES</div><div class="border-r border-black p-2"></div><div class="border-r border-black p-2"></div><div class="p-2"></div></div>
+                  <div class="grid grid-cols-4 gap-0 border-b border-black text-sm"><div class="border-r border-black p-2 font-medium">SABADO</div><div class="border-r border-black p-2"></div><div class="border-r border-black p-2"></div><div class="p-2"></div></div>
+                  <div class="grid grid-cols-4 gap-0 border-b border-black text-sm"><div class="border-r border-black p-2 font-medium">DOMINGO</div><div class="border-r border-black p-2"></div><div class="border-r border-black p-2"></div><div class="p-2"></div></div>
+                  <div class="grid grid-cols-4 gap-0 border-b border-black text-sm"><div class="border-r border-black p-2 font-medium">OTRO</div><div class="border-r border-black p-2"></div><div class="border-r border-black p-2"></div><div class="p-2"></div></div>
+                </div>
+              </div>
+
+              <div class="mb-6">
+                <div class="font-bold text-sm mb-2">DOCUMENTACION DE RESPALDO OBLIGATORIA (Indique SI/NO)</div>
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                  <div class="flex justify-between items-center"><span>1. FOTOCOPIA CEDULA DE IDENTIDAD</span><span class="border-b border-black inline-block w-16"></span></div>
+                  <div class="flex justify-between items-center"><span>2. CERTIFICADO DE ANTECEDENTES</span><span class="border-b border-black inline-block w-16"></span></div>
+                  <div class="flex justify-between items-center"><span>3. CERTIFICADO DE AFILIACION AFP</span><span class="border-b border-black inline-block w-16"></span></div>
+                  <div class="flex justify-between items-center"><span>4. CERTIFICADO DE AFILIACION SALUD</span><span class="border-b border-black inline-block w-16"></span></div>
+                  <div class="flex justify-between items-center"><span>5. CERTIFICADO DE ESTUDIOS</span><span class="border-b border-black inline-block w-16"></span></div>
+                  <div class="flex justify-between items-center"><span>6. CERTIFICADO DE RESIDENCIA</span><span class="border-b border-black inline-block w-16"></span></div>
+                  <div class="flex justify-between items-center"><span>7. CERTIFICADO DE OS-10</span><span class="border-b border-black inline-block w-16"></span></div>
+                  <div class="flex justify-between items-center"><span>8. CURRICULUM</span><span class="border-b border-black inline-block w-16"></span></div>
+                  <div class="flex justify-between items-center"><span>9. OTROS</span><span class="border-b border-black inline-block w-16"></span></div>
+                </div>
+              </div>
+
+              <div class="mb-6">
+                <div class="font-bold text-sm mb-2">DETALLE DE LA ESTRUCTURA SALARIAL DE INGRESO</div>
+                <div class="border border-black">
+                  <div class="grid grid-cols-7 gap-0 bg-gray-100 border-b border-black text-xs">
+                    <div class="border-r border-black p-2 font-bold text-center">SUELDO<br/>BASE</div>
+                    <div class="border-r border-black p-2 font-bold text-center">GRATIFICACION</div>
+                    <div class="border-r border-black p-2 font-bold text-center">BONO</div>
+                    <div class="border-r border-black p-2 font-bold text-center">TURNO</div>
+                    <div class="border-r border-black p-2 font-bold text-center">ASISTENCIA</div>
+                    <div class="border-r border-black p-2 font-bold text-center">MOVILIZACION</div>
+                    <div class="p-2 font-bold text-center">COLACION</div>
+                  </div>
+                  <div class="grid grid-cols-7 gap-0 border-b border-black text-sm">
+                    <div class="border-r border-black p-2 text-center">$</div>
+                    <div class="border-r border-black p-2 text-center">$</div>
+                    <div class="border-r border-black p-2 text-center">$</div>
+                    <div class="border-r border-black p-2 text-center">$</div>
+                    <div class="border-r border-black p-2 text-center">$</div>
+                    <div class="border-r border-black p-2 text-center">$</div>
+                    <div class="p-2 text-center">$</div>
+                  </div>
+                  <div class="p-2 text-center font-bold text-sm">
+                    TOTAL LIQUIDO: $
+                    <span class="ml-2 border-b border-black inline-block w-32"></span>
+                  </div>
+                </div>
+                <div class="text-sm mt-2">
+                  <span class="font-bold">OTROS CONCEPTOS SALARIALES:</span>
+                  <span class="ml-2">$</span>
+                  <span class="ml-2 border-b border-black inline-block w-32"></span>
+                </div>
+              </div>
+
+              <div class="border-t border-black pt-4">
+                <div class="font-bold text-sm mb-2">CUADRO DE APROBACIÓN</div>
+                <div class="grid grid-cols-3 gap-4 text-sm">
+                  <div class="text-center">
+                    <div class="font-bold mb-2">SOLICITANTE</div>
+                    <div class="border-b border-black h-12"></div>
+                  </div>
+                  <div class="text-center">
+                    <div class="font-bold mb-2">V°B° OPERACIONES</div>
+                    <div class="border-b border-black h-12"></div>
+                  </div>
+                  <div class="text-center">
+                    <div class="font-bold mb-2">V°B° RRHH</div>
+                    <div class="border-b border-black h-12"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script>
     const SHEETDB_API_URL = "https://sheetdb.io/api/v1/arqvckj0fb8af";
     const DECISIONS_API_URL = "https://sheetdb.io/api/v1/arqvckj0fb8af"; // Para guardar decisiones
     let gestiones = [];
+    let currentCandidates = []; // Variable para guardar los candidatos de la búsqueda actual
 
     // 🔧 Panel de Debug
     function toggleDebugPanel() {
@@ -141,7 +529,7 @@
           updateDebugInfo(`📋 Primer registro: ${JSON.stringify(data[0])}`);
           updateDebugInfo(`🔑 Campos disponibles: ${Object.keys(data[0]).join(', ')}`);
         }
-
+        currentCandidates = data; // Guardar datos para uso futuro
         return data;
       } catch (error) {
         updateDebugInfo(`❌ Error: ${error.message}`);
@@ -180,7 +568,8 @@
           
           return matches.some(match => match === true);
         });
-
+        
+        currentCandidates = filtered; // Actualizar la lista de candidatos actual
         updateDebugInfo(`✅ Resultados filtrados: ${filtered.length} coincidencias`);
         return { success: true, data: filtered };
       } catch (error) {
@@ -212,14 +601,6 @@
       };
 
       try {
-        // Aquí podrías enviar a una hoja separada o a la misma
-        // const response = await fetch(DECISIONS_API_URL, {
-        //   method: "POST",
-        //   headers: { "Content-Type": "application/json" },
-        //   body: JSON.stringify(record),
-        // });
-
-        // Por ahora solo lo guardamos localmente
         gestiones.unshift(record);
         updateDebugInfo(`✅ Decisión guardada: ${reclutado ? "RECLUTADO" : "RECHAZADO"}`);
         return { success: true };
@@ -275,6 +656,12 @@
               class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded text-sm"
             >
               📋 Cartilla PDF
+            </button>
+            <button 
+              onclick="showApplicationForm('${candidato.RUT}')" 
+              class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded text-sm"
+            >
+              📝 Ver Ficha
             </button>
             <button 
               onclick="handleDecision('${candidato.RUT}', true)" 
@@ -338,59 +725,47 @@
       updateDebugInfo(`📥 Iniciando descarga de CV para ${nombreCandidato}`);
       
       try {
-        // Crear enlace de descarga
         const link = document.createElement('a');
         link.href = enlaceCV;
         link.download = `CV_${nombreCandidato.replace(/\s+/g, '_')}.pdf`;
         link.target = '_blank';
-        
-        // Trigger download
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
         updateDebugInfo(`✅ Descarga iniciada para CV de ${nombreCandidato}`);
       } catch (error) {
         updateDebugInfo(`❌ Error al descargar CV: ${error.message}`);
         alert("❌ Error al descargar el CV");
       }
     };
-
+    
     // 📋 Generar cartilla PDF del candidato
     window.generateCartilla = async function(rutCandidato) {
       updateDebugInfo(`📋 Generando cartilla para RUT: ${rutCandidato}`);
       
       try {
-        // Buscar datos del candidato
-        const response = await fetch(SHEETDB_API_URL);
-        const allData = await response.json();
-        const candidato = allData.find(c => c.RUT === rutCandidato);
-        
+        const candidato = currentCandidates.find(c => c.RUT === rutCandidato);
         if (!candidato) {
-          alert("❌ No se encontraron datos del candidato");
+          alert("❌ No se encontraron datos del candidato para generar la cartilla.");
+          updateDebugInfo(`❌ Candidato con RUT ${rutCandidato} no encontrado en la lista actual.`);
           return;
         }
 
-        // Crear PDF con jsPDF
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
-        // Header con logos (simulado)
-        doc.setFillColor(0, 35, 56); // Color Grupo Norte
+        doc.setFillColor(0, 35, 56);
         doc.rect(0, 0, 210, 30, 'F');
-        
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(20);
         doc.text('GRUPO NORTE', 20, 20);
         doc.setFontSize(12);
         doc.text('Sistema de Reclutamiento', 150, 20);
         
-        // Título
         doc.setTextColor(0, 0, 0);
         doc.setFontSize(16);
         doc.text('CARTILLA DE CANDIDATO', 20, 50);
         
-        // Información del candidato
         let yPos = 70;
         const lineHeight = 8;
         
@@ -414,21 +789,18 @@
           doc.text(`${campo}:`, 20, yPos);
           doc.setFont(undefined, 'normal');
           
-          // Manejar texto largo
           const maxWidth = 160;
-          const splitText = doc.splitTextToSize(valor.toString(), maxWidth);
+          const splitText = doc.splitTextToSize(String(valor || ''), maxWidth);
           doc.text(splitText, 70, yPos);
           
           yPos += lineHeight * splitText.length;
           
-          // Nueva página si es necesario
           if (yPos > 270) {
             doc.addPage();
             yPos = 20;
           }
         });
         
-        // Footer
         const fechaGeneracion = new Date().toLocaleDateString('es-CL');
         const horaGeneracion = new Date().toLocaleTimeString('es-CL');
         
@@ -436,15 +808,119 @@
         doc.setTextColor(100, 100, 100);
         doc.text(`Cartilla generada el ${fechaGeneracion} a las ${horaGeneracion}`, 20, yPos + 20);
         
-        // Descargar PDF
         const nombreArchivo = `Cartilla_${candidato.NOMBRE}_${candidato.APELLIDO}_${candidato.RUT}.pdf`.replace(/\s+/g, '_');
         doc.save(nombreArchivo);
-        
         updateDebugInfo(`✅ Cartilla PDF generada: ${nombreArchivo}`);
         
       } catch (error) {
         updateDebugInfo(`❌ Error al generar cartilla: ${error.message}`);
         alert("❌ Error al generar la cartilla PDF");
+      }
+    };
+    
+    // 📝 Funciones para la Ficha de Postulación
+    window.showApplicationForm = function(rutCandidato) {
+      updateDebugInfo(`📝 Mostrando ficha para RUT: ${rutCandidato}`);
+      const candidato = currentCandidates.find(c => c.RUT === rutCandidato);
+      
+      if (!candidato) {
+        alert("❌ No se encontraron datos del candidato para mostrar la ficha.");
+        updateDebugInfo(`❌ Candidato con RUT ${rutCandidato} no encontrado en la lista actual.`);
+        return;
+      }
+      
+      // Llenar el formulario con los datos
+      document.getElementById('form-fecha-postulacion').textContent = candidato["FECHA DE POSTULACION"] || '';
+      document.getElementById('form-cargo').textContent = candidato.CARGO || '';
+      document.getElementById('form-nombre').textContent = `${candidato.NOMBRE || ''} ${candidato.APELLIDO || ''}`.trim();
+      document.getElementById('form-rut').textContent = candidato.RUT || '';
+      document.getElementById('form-estado-civil').textContent = candidato["ESTADO CIVIL"] || '';
+      document.getElementById('form-fecha-nacimiento').textContent = candidato["FECHA DE NACIMIENTO"] || '';
+      document.getElementById('form-edad').textContent = candidato.EDAD || '';
+      document.getElementById('form-nacionalidad').textContent = candidato.NACIONALIDAD || '';
+      document.getElementById('form-visa').textContent = candidato.VISA || '';
+      document.getElementById('form-cargas').textContent = candidato["CARGAS FAMILIARES"] || '';
+      document.getElementById('form-direccion').textContent = candidato.DIRECCION || '';
+      document.getElementById('form-poblacion').textContent = candidato.POBLACION || '';
+      document.getElementById('form-comuna').textContent = candidato.COMUNA || '';
+      document.getElementById('form-ciudad').textContent = candidato.CIUDAD || '';
+      document.getElementById('form-telefono').textContent = candidato.TELEFONO || '';
+      document.getElementById('form-email').textContent = candidato.EMAIL || '';
+
+      const modal = document.getElementById('formularioModal');
+      // Guardar el RUT del candidato actual en el modal para usarlo al descargar
+      modal.setAttribute('data-current-rut', rutCandidato);
+      modal.classList.remove('hidden');
+    };
+
+    window.hideApplicationForm = function() {
+      document.getElementById('formularioModal').classList.add('hidden');
+    };
+
+    // =========================================================================
+    // ===== NUEVA FUNCIÓN PARA DESCARGAR LA FICHA COMPLETA COMO PDF =====
+    // =========================================================================
+    window.downloadFichaPDF = async function() {
+      const downloadBtn = document.getElementById('downloadFichaBtn');
+      downloadBtn.disabled = true;
+      downloadBtn.textContent = 'Generando...';
+
+      const modal = document.getElementById('formularioModal');
+      const rutCandidato = modal.getAttribute('data-current-rut');
+      const candidato = currentCandidates.find(c => c.RUT === rutCandidato);
+
+      if (!candidato) {
+        alert('❌ Error: No se pudo encontrar al candidato para generar el PDF.');
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = '📄 Descargar Ficha';
+        return;
+      }
+      
+      const formElement = document.getElementById('formularioPostulacion');
+      
+      try {
+        const canvas = await html2canvas(formElement, {
+          scale: 2, // Mejora la resolución de la imagen
+          useCORS: true,
+          logging: false
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+
+        // Crear PDF en orientación vertical (portrait), usando pixeles como unidad, en formato A4
+        const pdf = new jsPDF('p', 'px', 'a4');
+        
+        const imgProps = pdf.getImageProperties(imgData);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+        let heightLeft = pdfHeight;
+        let position = 0;
+
+        // Añadir la primera página
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pdf.internal.pageSize.getHeight();
+
+        // Si la ficha es muy larga, añadir páginas adicionales
+        while (heightLeft >= 0) {
+          position = heightLeft - pdfHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+          heightLeft -= pdf.internal.pageSize.getHeight();
+        }
+
+        const nombreCandidato = `${candidato.NOMBRE || ''}_${candidato.APELLIDO || ''}`.replace(/\s+/g, '_');
+        const nombreArchivo = `Ficha_${nombreCandidato}_${candidato.RUT}.pdf`;
+        pdf.save(nombreArchivo);
+        updateDebugInfo(`✅ Ficha PDF generada: ${nombreArchivo}`);
+        
+      } catch (error) {
+        updateDebugInfo(`❌ Error al generar ficha PDF: ${error.message}`);
+        alert(`❌ Ocurrió un error al generar el PDF de la ficha.`);
+      } finally {
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = '📄 Descargar Ficha';
       }
     };
 
@@ -458,53 +934,29 @@
       updateDebugInfo(`📊 Generando archivo Excel con ${gestiones.length} gestiones`);
       
       try {
-        // Preparar datos para Excel
         const excelData = gestiones.map(gestion => ({
-          'Nombre': gestion.nombre,
-          'RUT': gestion.rut,
-          'Cargo': gestion.cargo,
-          'Email': gestion.email,
-          'Teléfono': gestion.telefono,
-          'Comuna': gestion.comuna,
-          'Empresa': gestion.empresa,
-          'Fecha Postulación': gestion.fechaPostulacion,
-          'Estado': gestion.reclutado,
-          'Motivo': gestion.motivo,
-          'Fecha Registro': gestion.fechaRegistro,
-          'Hora Registro': gestion.horaRegistro
+          'Nombre': gestion.nombre, 'RUT': gestion.rut, 'Cargo': gestion.cargo,
+          'Email': gestion.email, 'Teléfono': gestion.telefono, 'Comuna': gestion.comuna,
+          'Empresa': gestion.empresa, 'Fecha Postulación': gestion.fechaPostulacion,
+          'Estado': gestion.reclutado, 'Motivo': gestion.motivo,
+          'Fecha Registro': gestion.fechaRegistro, 'Hora Registro': gestion.horaRegistro
         }));
         
-        // Crear workbook
         const ws = XLSX.utils.json_to_sheet(excelData);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Gestiones de Reclutamiento");
         
-        // Ajustar ancho de columnas
-        const colWidths = [
-          { wch: 25 }, // Nombre
-          { wch: 12 }, // RUT
-          { wch: 20 }, // Cargo
-          { wch: 25 }, // Email
-          { wch: 12 }, // Teléfono
-          { wch: 15 }, // Comuna
-          { wch: 20 }, // Empresa
-          { wch: 12 }, // Fecha Postulación
-          { wch: 10 }, // Estado
-          { wch: 30 }, // Motivo
-          { wch: 12 }, // Fecha Registro
-          { wch: 10 }  // Hora Registro
+        ws['!cols'] = [
+          { wch: 25 }, { wch: 12 }, { wch: 20 }, { wch: 25 }, { wch: 12 },
+          { wch: 15 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 30 },
+          { wch: 12 }, { wch: 10 }
         ];
-        ws['!cols'] = colWidths;
         
-        // Generar nombre de archivo
         const fecha = new Date().toISOString().split('T')[0];
         const nombreArchivo = `Historial_Reclutamiento_${fecha}.xlsx`;
         
-        // Descargar
         XLSX.writeFile(wb, nombreArchivo);
-        
         updateDebugInfo(`✅ Archivo Excel descargado: ${nombreArchivo}`);
-        
       } catch (error) {
         updateDebugInfo(`❌ Error al generar Excel: ${error.message}`);
         alert("❌ Error al generar el archivo Excel");
@@ -524,14 +976,12 @@
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
-        // Header
         doc.setFillColor(0, 35, 56);
         doc.rect(0, 0, 210, 25, 'F');
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(16);
         doc.text('GRUPO NORTE - HISTORIAL DE RECLUTAMIENTO', 20, 17);
         
-        // Fecha de generación
         doc.setTextColor(0, 0, 0);
         doc.setFontSize(10);
         const fechaHoy = new Date().toLocaleDateString('es-CL');
@@ -542,18 +992,15 @@
         const pageHeight = 280;
         
         gestiones.forEach((gestion, index) => {
-          // Nueva página si es necesario
           if (yPos > pageHeight - 40) {
             doc.addPage();
             yPos = 20;
           }
           
-          // Separador
           doc.setDrawColor(200, 200, 200);
           doc.line(20, yPos, 190, yPos);
           yPos += 5;
           
-          // Datos del candidato
           doc.setFontSize(12);
           doc.setFont(undefined, 'bold');
           doc.text(`${index + 1}. ${gestion.nombre}`, 20, yPos);
@@ -563,11 +1010,8 @@
           doc.setFont(undefined, 'normal');
           
           const info = [
-            `RUT: ${gestion.rut}`,
-            `Cargo: ${gestion.cargo}`,
-            `Email: ${gestion.email}`,
-            `Estado: ${gestion.reclutado}`,
-            `Motivo: ${gestion.motivo}`,
+            `RUT: ${gestion.rut}`, `Cargo: ${gestion.cargo}`, `Email: ${gestion.email}`,
+            `Estado: ${gestion.reclutado}`, `Motivo: ${gestion.motivo}`,
             `Fecha: ${gestion.fechaRegistro} ${gestion.horaRegistro}`
           ];
           
@@ -579,48 +1023,38 @@
           yPos += 3;
         });
         
-        // Descargar
         const nombreArchivo = `Historial_Reclutamiento_${fechaHoy.replace(/\//g, '-')}.pdf`;
         doc.save(nombreArchivo);
-        
         updateDebugInfo(`✅ PDF descargado: ${nombreArchivo}`);
-        
       } catch (error) {
         updateDebugInfo(`❌ Error al generar PDF: ${error.message}`);
         alert("❌ Error al generar el archivo PDF");
       }
     }
+    
+    // ✋ Manejar decisión de reclutamiento
     window.handleDecision = async function(rutCandidato, reclutado) {
       const motivo = prompt(
-        reclutado ? 
-        "Ingresa el motivo de la aprobación (opcional):" : 
-        "Ingresa el motivo del rechazo (opcional):"
+        reclutado ? "Ingresa el motivo de la aprobación (opcional):" : "Ingresa el motivo del rechazo (opcional):"
       );
       
-      if (motivo === null) return; // Usuario canceló
+      if (motivo === null) return;
 
-      // Buscar el candidato en los resultados actuales
-      const resultsDiv = document.getElementById("results");
-      const candidatos = await searchCandidates(document.getElementById("searchInput").value);
+      const candidato = currentCandidates.find(c => c.RUT === rutCandidato);
       
-      if (candidatos.success) {
-        const candidato = candidatos.data.find(c => c.RUT === rutCandidato);
-        
-        if (candidato) {
-          const result = await saveDecision(candidato, reclutado, motivo);
-          
-          if (result.success) {
-            // Remover de resultados
-            renderResults(candidatos.data.filter(c => c.RUT !== rutCandidato));
-            // Actualizar historial
-            renderHistorial();
-            
-            const mensaje = reclutado ? "Candidato reclutado exitosamente" : "Candidato rechazado";
-            alert(`✅ ${mensaje}`);
-          } else {
-            alert(`❌ Error al procesar decisión: ${result.error}`);
-          }
+      if (candidato) {
+        const result = await saveDecision(candidato, reclutado, motivo);
+        if (result.success) {
+          currentCandidates = currentCandidates.filter(c => c.RUT !== rutCandidato);
+          renderResults(currentCandidates);
+          renderHistorial();
+          const mensaje = reclutado ? "Candidato reclutado exitosamente" : "Candidato rechazado";
+          alert(`✅ ${mensaje}`);
+        } else {
+          alert(`❌ Error al procesar decisión: ${result.error}`);
         }
+      } else {
+        alert("❌ No se encontró al candidato en la lista actual.");
       }
     };
 
@@ -629,15 +1063,13 @@
       clearDebugInfo();
       try {
         const data = await testAPI();
-        renderResults(data.slice(0, 5)); // Mostrar primeros 5 como ejemplo
+        renderResults(data.slice(0, 5));
       } catch (error) {
         document.getElementById("results").innerHTML = `<p class="text-red-500">❌ Error: ${error.message}</p>`;
       }
     });
 
     document.getElementById("clearDebugBtn").addEventListener("click", clearDebugInfo);
-
-    // Event listeners para descargas
     document.getElementById("downloadExcelBtn").addEventListener("click", downloadExcel);
     document.getElementById("downloadPdfBtn").addEventListener("click", downloadPDF);
 
@@ -647,7 +1079,6 @@
         document.getElementById("results").innerHTML = `<p class="text-gray-400">Escribe al menos 2 caracteres...</p>`;
         return;
       }
-
       const result = await searchCandidates(query);
       if (result.success) {
         renderResults(result.data);
@@ -656,14 +1087,12 @@
       }
     });
 
-    // Búsqueda en tiempo real
     document.getElementById("searchInput").addEventListener("input", async (e) => {
       const query = e.target.value;
       if (query.length < 2) {
         document.getElementById("results").innerHTML = `<p class="text-gray-400">Escribe al menos 2 caracteres...</p>`;
         return;
       }
-
       const result = await searchCandidates(query);
       if (result.success) {
         renderResults(result.data);
@@ -672,14 +1101,12 @@
       }
     });
 
-    // Búsqueda con Enter
     document.getElementById("searchInput").addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         document.getElementById("searchBtn").click();
       }
     });
 
-    // Inicializar
     window.addEventListener('load', () => {
       updateDebugInfo("🚀 Sistema de Reclutamiento iniciado");
       renderHistorial();
