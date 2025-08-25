@@ -22,6 +22,12 @@
   <main class="max-w-5xl mx-auto bg-white shadow-lg rounded-xl p-6 mt-6">
     <h1 class="text-2xl font-bold mb-4 text-center text-gray-800">📋 Sistema de Reclutamiento</h1>
 
+    <!-- Debug Panel -->
+    <div class="bg-gray-100 p-4 rounded-lg mb-4">
+      <h3 class="font-bold text-gray-700 mb-2">🔧 Panel de Debug</h3>
+      <div id="debugInfo" class="text-sm text-gray-600"></div>
+    </div>
+
     <!-- Input de búsqueda -->
     <input 
       type="text" 
@@ -30,37 +36,83 @@
       class="w-full p-3 border rounded-lg mb-6 focus:ring focus:ring-green-300"
     />
 
+    <!-- Botón de test API -->
+    <button id="testApiBtn" class="bg-blue-500 text-white px-4 py-2 rounded mb-4 hover:bg-blue-600">
+      🔍 Probar conexión a API
+    </button>
+
     <!-- Resultados -->
     <div id="results" class="space-y-3"></div>
   </main>
 
   <script>
-    const SHEETDB_API_URL = "https://sheetdb.io/api/v1/arqvckj0fb8af"; // ✅ tu endpoint
+    const SHEETDB_API_URL = "https://sheetdb.io/api/v1/arqvckj0fb8af";
 
-    // 🔎 Búsqueda parcial en frontend
-    async function searchCandidates(query) {
+    function updateDebugInfo(message) {
+      const debugDiv = document.getElementById("debugInfo");
+      debugDiv.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
+    }
+
+    // 🔧 Función para probar la API
+    async function testAPI() {
+      updateDebugInfo("🔄 Iniciando prueba de API...");
+      
       try {
-        const sanitizedQuery = query.trim().toLowerCase();
+        const response = await fetch(SHEETDB_API_URL);
+        updateDebugInfo(`📡 Respuesta HTTP: ${response.status} ${response.statusText}`);
+        
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
 
+        const data = await response.json();
+        updateDebugInfo(`✅ Datos recibidos: ${data.length} registros`);
+        
+        if (data.length > 0) {
+          updateDebugInfo(`📋 Primer registro: ${JSON.stringify(data[0])}`);
+          updateDebugInfo(`🔑 Campos disponibles: ${Object.keys(data[0]).join(', ')}`);
+        }
+
+        return data;
+      } catch (error) {
+        updateDebugInfo(`❌ Error: ${error.message}`);
+        throw error;
+      }
+    }
+
+    // 🔎 Búsqueda mejorada con debug
+    async function searchCandidates(query) {
+      updateDebugInfo(`🔍 Buscando: "${query}"`);
+      
+      try {
         const response = await fetch(SHEETDB_API_URL);
         if (!response.ok) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
         }
 
         const allData = await response.json();
+        updateDebugInfo(`📊 Total de registros en la base: ${allData.length}`);
 
-        const filtered = allData.filter(candidato =>
-          (candidato.nombre && candidato.nombre.toLowerCase().includes(sanitizedQuery)) ||
-          (candidato.rut && candidato.rut.toLowerCase().includes(sanitizedQuery)) ||
-          (candidato.cargo && candidato.cargo.toLowerCase().includes(sanitizedQuery)) ||
-          (candidato.email && candidato.email.toLowerCase().includes(sanitizedQuery)) ||
-          (candidato.telefono && candidato.telefono.toLowerCase().includes(sanitizedQuery)) ||
-          (candidato.fechapostulacion && candidato.fechapostulacion.toLowerCase().includes(sanitizedQuery))
-        );
+        const sanitizedQuery = query.trim().toLowerCase();
+        updateDebugInfo(`🔤 Query procesada: "${sanitizedQuery}"`);
 
+        const filtered = allData.filter(candidato => {
+          const matches = [
+            candidato.nombre && candidato.nombre.toLowerCase().includes(sanitizedQuery),
+            candidato.rut && candidato.rut.toLowerCase().includes(sanitizedQuery),
+            candidato.cargo && candidato.cargo.toLowerCase().includes(sanitizedQuery),
+            candidato.email && candidato.email.toLowerCase().includes(sanitizedQuery),
+            candidato.telefono && candidato.telefono.toLowerCase().includes(sanitizedQuery),
+            candidato.fechapostulacion && candidato.fechapostulacion.toLowerCase().includes(sanitizedQuery)
+          ];
+          
+          return matches.some(match => match === true);
+        });
+
+        updateDebugInfo(`✅ Resultados filtrados: ${filtered.length} coincidencias`);
         return { success: true, data: filtered };
       } catch (error) {
-        console.error("Error al buscar candidatos:", error);
+        updateDebugInfo(`❌ Error en búsqueda: ${error.message}`);
         return { success: false, error: error.message };
       }
     }
@@ -78,7 +130,7 @@
       data.forEach(candidato => {
         const card = document.createElement("div");
         card.className = "p-4 rounded-lg shadow-sm text-white";
-        card.style.backgroundColor = "#77c25c"; // ✅ color de tarjeta
+        card.style.backgroundColor = "#77c25c";
 
         card.innerHTML = `
           <p><strong>Nombre:</strong> ${candidato.nombre || "-"}</p>
@@ -92,7 +144,17 @@
       });
     }
 
-    // ⌨️ Buscar mientras se escribe
+    // Event Listeners
+    document.getElementById("testApiBtn").addEventListener("click", async () => {
+      document.getElementById("debugInfo").innerHTML = "";
+      try {
+        const data = await testAPI();
+        renderResults(data);
+      } catch (error) {
+        document.getElementById("results").innerHTML = `<p class="text-red-500">❌ Error: ${error.message}</p>`;
+      }
+    });
+
     document.getElementById("searchInput").addEventListener("input", async (e) => {
       const query = e.target.value;
       if (query.length < 2) {
@@ -106,6 +168,11 @@
       } else {
         document.getElementById("results").innerHTML = `<p class="text-red-500">❌ Error: ${result.error}</p>`;
       }
+    });
+
+    // Cargar datos iniciales al cargar la página
+    window.addEventListener('load', () => {
+      updateDebugInfo("🚀 Sistema iniciado");
     });
   </script>
 </body>
