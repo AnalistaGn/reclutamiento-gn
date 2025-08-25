@@ -4,34 +4,44 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sistema de Reclutamiento - Grupo Norte</title>
-  <!-- ⚠️ En producción instala Tailwind en tu proyecto (esto es solo para pruebas) -->
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 p-6">
-  <div class="max-w-3xl mx-auto bg-white shadow-lg rounded-xl p-6">
-    <h1 class="text-2xl font-bold mb-4 text-center">🔎 Búsqueda de Candidatos</h1>
+<body class="min-h-screen" style="background-color:#002338;">
+
+  <!-- 🔝 Header con fondo oscuro y logos -->
+  <header class="w-full py-4" style="background-color:#002338;">
+    <div class="max-w-5xl mx-auto flex justify-center items-center gap-6">
+      <img src="https://github.com/AnalistaGn/dashboard-gn-e/blob/main/Grupo%20%5E%20Norte_%20Creamos%20.png?raw=true" 
+           alt="Grupo Norte" class="h-16 object-contain" />
+      <img src="https://github.com/AnalistaGn/dashboard-gn-e/blob/main/Norti%CC%81n%20Verde.png?raw=true" 
+           alt="Nortín Verde" class="h-16 object-contain" />
+    </div>
+  </header>
+
+  <!-- Contenido principal -->
+  <main class="max-w-5xl mx-auto bg-white shadow-lg rounded-xl p-6 mt-6">
+    <h1 class="text-2xl font-bold mb-4 text-center text-gray-800">📋 Sistema de Reclutamiento</h1>
 
     <!-- Input de búsqueda -->
     <input 
       type="text" 
       id="searchInput" 
-      placeholder="Escribe nombre, RUT, cargo o email..." 
-      class="w-full p-3 border rounded-lg mb-4 focus:ring focus:ring-blue-300"
+      placeholder="Escribe nombre, RUT, cargo, email, teléfono o fecha..." 
+      class="w-full p-3 border rounded-lg mb-6 focus:ring focus:ring-green-300"
     />
 
     <!-- Resultados -->
     <div id="results" class="space-y-3"></div>
-  </div>
+  </main>
 
   <script>
     const SHEETDB_API_URL = "https://sheetdb.io/api/v1/arqvckj0fb8af"; // ✅ tu endpoint
 
-    // 🔎 Búsqueda parcial (frontend)
+    // 🔎 Búsqueda parcial en frontend
     async function searchCandidates(query) {
       try {
         const sanitizedQuery = query.trim().toLowerCase();
 
-        // 1. Traer todos los registros de la hoja
         const response = await fetch(SHEETDB_API_URL);
         if (!response.ok) {
           throw new Error(`Error ${response.status}: ${response.statusText}`);
@@ -39,12 +49,13 @@
 
         const allData = await response.json();
 
-        // 2. Filtrar localmente
         const filtered = allData.filter(candidato =>
           (candidato.nombre && candidato.nombre.toLowerCase().includes(sanitizedQuery)) ||
           (candidato.rut && candidato.rut.toLowerCase().includes(sanitizedQuery)) ||
           (candidato.cargo && candidato.cargo.toLowerCase().includes(sanitizedQuery)) ||
-          (candidato.email && candidato.email.toLowerCase().includes(sanitizedQuery))
+          (candidato.email && candidato.email.toLowerCase().includes(sanitizedQuery)) ||
+          (candidato.telefono && candidato.telefono.toLowerCase().includes(sanitizedQuery)) ||
+          (candidato.fechapostulacion && candidato.fechapostulacion.toLowerCase().includes(sanitizedQuery))
         );
 
         return { success: true, data: filtered };
@@ -54,7 +65,7 @@
       }
     }
 
-    // 🎨 Mostrar resultados en HTML
+    // 🎨 Renderizar resultados
     function renderResults(data) {
       const resultsDiv = document.getElementById("results");
       resultsDiv.innerHTML = "";
@@ -66,13 +77,16 @@
 
       data.forEach(candidato => {
         const card = document.createElement("div");
-        card.className = "p-4 border rounded-lg shadow-sm bg-gray-50";
+        card.className = "p-4 rounded-lg shadow-sm text-white";
+        card.style.backgroundColor = "#77c25c"; // ✅ color de tarjeta
 
         card.innerHTML = `
           <p><strong>Nombre:</strong> ${candidato.nombre || "-"}</p>
           <p><strong>RUT:</strong> ${candidato.rut || "-"}</p>
           <p><strong>Cargo:</strong> ${candidato.cargo || "-"}</p>
           <p><strong>Email:</strong> ${candidato.email || "-"}</p>
+          <p><strong>Teléfono:</strong> ${candidato.telefono || "-"}</p>
+          <p><strong>Fecha Postulación:</strong> ${candidato.fechapostulacion || "-"}</p>
         `;
         resultsDiv.appendChild(card);
       });
