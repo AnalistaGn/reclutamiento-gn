@@ -98,12 +98,15 @@
 
         const filtered = allData.filter(candidato => {
           const matches = [
-            candidato.nombre && candidato.nombre.toLowerCase().includes(sanitizedQuery),
-            candidato.rut && candidato.rut.toLowerCase().includes(sanitizedQuery),
-            candidato.cargo && candidato.cargo.toLowerCase().includes(sanitizedQuery),
-            candidato.email && candidato.email.toLowerCase().includes(sanitizedQuery),
-            candidato.telefono && candidato.telefono.toLowerCase().includes(sanitizedQuery),
-            candidato.fechapostulacion && candidato.fechapostulacion.toLowerCase().includes(sanitizedQuery)
+            candidato.NOMBRE && candidato.NOMBRE.toLowerCase().includes(sanitizedQuery),
+            candidato.APELLIDO && candidato.APELLIDO.toLowerCase().includes(sanitizedQuery),
+            candidato.RUT && candidato.RUT.toLowerCase().includes(sanitizedQuery),
+            candidato.CARGO && candidato.CARGO.toLowerCase().includes(sanitizedQuery),
+            candidato.EMAIL && candidato.EMAIL.toLowerCase().includes(sanitizedQuery),
+            candidato.TELEFONO && candidato.TELEFONO.toLowerCase().includes(sanitizedQuery),
+            candidato["FECHA DE POSTULACION"] && candidato["FECHA DE POSTULACION"].toLowerCase().includes(sanitizedQuery),
+            candidato.COMUNA && candidato.COMUNA.toLowerCase().includes(sanitizedQuery),
+            candidato.EMPRESA && candidato.EMPRESA.toLowerCase().includes(sanitizedQuery)
           ];
           
           return matches.some(match => match === true);
@@ -133,12 +136,14 @@
         card.style.backgroundColor = "#77c25c";
 
         card.innerHTML = `
-          <p><strong>Nombre:</strong> ${candidato.nombre || "-"}</p>
-          <p><strong>RUT:</strong> ${candidato.rut || "-"}</p>
-          <p><strong>Cargo:</strong> ${candidato.cargo || "-"}</p>
-          <p><strong>Email:</strong> ${candidato.email || "-"}</p>
-          <p><strong>Teléfono:</strong> ${candidato.telefono || "-"}</p>
-          <p><strong>Fecha Postulación:</strong> ${candidato.fechapostulacion || "-"}</p>
+          <p><strong>Nombre:</strong> ${candidato.NOMBRE || "-"} ${candidato.APELLIDO || ""}</p>
+          <p><strong>RUT:</strong> ${candidato.RUT || "-"}</p>
+          <p><strong>Cargo:</strong> ${candidato.CARGO || "-"}</p>
+          <p><strong>Email:</strong> ${candidato.EMAIL || "-"}</p>
+          <p><strong>Teléfono:</strong> ${candidato.TELEFONO || "-"}</p>
+          <p><strong>Comuna:</strong> ${candidato.COMUNA || "-"}</p>
+          <p><strong>Empresa:</strong> ${candidato.EMPRESA || "-"}</p>
+          <p><strong>Fecha Postulación:</strong> ${candidato["FECHA DE POSTULACION"] || "-"}</p>
         `;
         resultsDiv.appendChild(card);
       });
