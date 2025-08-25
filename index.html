@@ -1,202 +1,98 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sistema de Reclutamiento - Grupo Norte</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.5/babel.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistema de Reclutamiento - Grupo Norte</title>
+  <!-- ⚠️ En producción instala Tailwind en tu proyecto (esto es solo para pruebas) -->
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900 text-white min-h-screen">
-  <div id="root"></div>
+<body class="bg-gray-100 p-6">
+  <div class="max-w-3xl mx-auto bg-white shadow-lg rounded-xl p-6">
+    <h1 class="text-2xl font-bold mb-4 text-center">🔎 Búsqueda de Candidatos</h1>
 
-  <script type="text/babel">
-    const { useState } = React;
+    <!-- Input de búsqueda -->
+    <input 
+      type="text" 
+      id="searchInput" 
+      placeholder="Escribe nombre, RUT, cargo o email..." 
+      class="w-full p-3 border rounded-lg mb-4 focus:ring focus:ring-blue-300"
+    />
 
-    // ⚠️ Pega tu URL completa de la API de SheetDB aquí
-    const SHEETDB_API_URL = "https://sheetdb.io/api/v1/arqvckj0fb8af";
+    <!-- Resultados -->
+    <div id="results" class="space-y-3"></div>
+  </div>
 
- // 🔎 Búsqueda parcial (nombre, rut, cargo, email)
-async function searchCandidates(query) {
-  try {
-    const sanitizedQuery = query.trim();
+  <script>
+    const SHEETDB_API_URL = "https://sheetdb.io/api/v1/arqvckj0fb8af"; // ✅ tu endpoint
 
-    // Construir la URL de búsqueda correcta para la API de SheetDB
-    const queryURL = 
-      `${SHEETDB_API_URL}/search_or?rut=${encodeURIComponent(sanitizedQuery)}&nombre=${encodeURIComponent(sanitizedQuery)}&cargo=${encodeURIComponent(sanitizedQuery)}&email=${encodeURIComponent(sanitizedQuery)}`;
+    // 🔎 Búsqueda parcial (frontend)
+    async function searchCandidates(query) {
+      try {
+        const sanitizedQuery = query.trim().toLowerCase();
 
-    const response = await fetch(queryURL);
+        // 1. Traer todos los registros de la hoja
+        const response = await fetch(SHEETDB_API_URL);
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
 
-    if (!response.ok) {
-      throw new Error(`Error ${response.status}: ${response.statusText}`);
-    }
+        const allData = await response.json();
 
-    const data = await response.json();
-    return { success: true, data: Array.isArray(data) ? data : [] };
-  } catch (error) {
-    console.error("Error al buscar candidatos:", error);
-    return { success: false, error: error.message };
-  }
-}
+        // 2. Filtrar localmente
+        const filtered = allData.filter(candidato =>
+          (candidato.nombre && candidato.nombre.toLowerCase().includes(sanitizedQuery)) ||
+          (candidato.rut && candidato.rut.toLowerCase().includes(sanitizedQuery)) ||
+          (candidato.cargo && candidato.cargo.toLowerCase().includes(sanitizedQuery)) ||
+          (candidato.email && candidato.email.toLowerCase().includes(sanitizedQuery))
+        );
 
-    // 💾 Guardar decisión en la hoja
-    async function saveToSheetDB(record) {
-      try {
-        const response = await fetch(SHEETDB_API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(record),
-        });
-        if (!response.ok) throw new Error("Error al guardar en la hoja");
-        return { success: true };
-      } catch (error) {
-        console.error("Error al guardar:", error);
-        return { success: false, error: error.message };
-      }
-    }
+        return { success: true, data: filtered };
+      } catch (error) {
+        console.error("Error al buscar candidatos:", error);
+        return { success: false, error: error.message };
+      }
+    }
 
-    function RecruitmentApp() {
-      const [busqueda, setBusqueda] = useState("");
-      const [resultados, setResultados] = useState([]);
-      const [gestiones, setGestiones] = useState([]);
-      const [loading, setLoading] = useState(false);
+    // 🎨 Mostrar resultados en HTML
+    function renderResults(data) {
+      const resultsDiv = document.getElementById("results");
+      resultsDiv.innerHTML = "";
 
-      const handleSearch = async () => {
-        if (!busqueda.trim()) {
-          setResultados([]);
-          return;
-        }
-        setLoading(true);
-        const result = await searchCandidates(busqueda);
-        setLoading(false);
-        if (result.success) {
-          setResultados(result.data);
-        } else {
-          alert("Error al buscar: " + result.error);
-        }
-      };
+      if (data.length === 0) {
+        resultsDiv.innerHTML = `<p class="text-gray-500">No se encontraron resultados.</p>`;
+        return;
+      }
 
-      const handleDecision = async (candidato, reclutado) => {
-        const record = {
-          nombre: candidato.nombre || "N/A",
-          rut: candidato.rut || "N/A",
-          cargo: candidato.cargo || "N/A",
-          email: candidato.email || "N/A",
-          telefono: candidato.telefono || "N/A",
-          fechaPostulacion: candidato.fechaPostulacion || "N/A",
-          reclutado: reclutado ? "Sí" : "No",
-          motivo: reclutado ? "Aprobado en entrevista" : "No cumple requisitos",
-          fechaRegistro: new Date().toLocaleDateString("es-CL"),
-          horaRegistro: new Date().toLocaleTimeString("es-CL", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        };
+      data.forEach(candidato => {
+        const card = document.createElement("div");
+        card.className = "p-4 border rounded-lg shadow-sm bg-gray-50";
 
-        const save = await saveToSheetDB(record);
-        if (save.success) {
-          setGestiones(prev => [record, ...prev]);
-          setResultados(prev => prev.filter(c => c.rut !== candidato.rut));
-        } else {
-          alert("Error al guardar: " + save.error);
-        }
-      };
+        card.innerHTML = `
+          <p><strong>Nombre:</strong> ${candidato.nombre || "-"}</p>
+          <p><strong>RUT:</strong> ${candidato.rut || "-"}</p>
+          <p><strong>Cargo:</strong> ${candidato.cargo || "-"}</p>
+          <p><strong>Email:</strong> ${candidato.email || "-"}</p>
+        `;
+        resultsDiv.appendChild(card);
+      });
+    }
 
-      return (
-        <div className="p-6 max-w-6xl mx-auto">
-          {/* Header */}
-          <h1 className="text-3xl font-bold text-center mb-6">📋 Sistema de Reclutamiento</h1>
+    // ⌨️ Buscar mientras se escribe
+    document.getElementById("searchInput").addEventListener("input", async (e) => {
+      const query = e.target.value;
+      if (query.length < 2) {
+        document.getElementById("results").innerHTML = `<p class="text-gray-400">Escribe al menos 2 caracteres...</p>`;
+        return;
+      }
 
-          {/* Buscador */}
-          <div className="mb-6 flex gap-2">
-            <input
-              type="text"
-              value={busqueda}
-              onChange={e => setBusqueda(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleSearch()}
-              className="flex-grow px-4 py-2 rounded text-black"
-              placeholder="Buscar por nombre, RUT, cargo o email..."
-            />
-            <button
-              onClick={handleSearch}
-              disabled={loading}
-              className="bg-green-600 hover:bg-green-700 px-6 py-2 rounded"
-            >
-              {loading ? "Buscando..." : "Buscar"}
-            </button>
-          </div>
-
-          {/* Resultados */}
-          <div className="bg-gray-800 rounded-lg p-4 mb-6">
-            <h2 className="text-xl mb-4">Resultados</h2>
-            {loading ? (
-              <p>⏳ Cargando...</p>
-            ) : resultados.length > 0 ? (
-              <div className="space-y-3">
-                {resultados.map(c => (
-                  <div key={c.rut} className="bg-gray-700 p-4 rounded flex justify-between items-center">
-                    <div>
-                      <p className="font-bold text-lg">{c.nombre}</p>
-                      <p className="text-sm">RUT: {c.rut} | Cargo: {c.cargo}</p>
-                      <p className="text-sm">📧 {c.email} | 📱 {c.telefono}</p>
-                    </div>
-                    <div className="space-x-2">
-                      <button
-                        onClick={() => handleDecision(c, true)}
-                        className="bg-blue-600 px-3 py-1 rounded"
-                      >
-                        ✅ Reclutar
-                      </button>
-                      <button
-                        onClick={() => handleDecision(c, false)}
-                        className="bg-red-600 px-3 py-1 rounded"
-                      >
-                        ❌ Rechazar
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p>No hay resultados</p>
-            )}
-          </div>
-
-          {/* Historial */}
-          {gestiones.length > 0 && (
-            <div className="bg-gray-800 rounded-lg p-4">
-              <h2 className="text-xl mb-4">Historial de Gestiones</h2>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-600">
-                    <th className="p-2 text-left">Nombre</th>
-                    <th className="p-2 text-left">RUT</th>
-                    <th className="p-2 text-left">Cargo</th>
-                    <th className="p-2 text-left">Estado</th>
-                    <th className="p-2 text-left">Fecha/Hora</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {gestiones.map((g, i) => (
-                    <tr key={i} className="border-b border-gray-700">
-                      <td className="p-2">{g.nombre}</td>
-                      <td className="p-2">{g.rut}</td>
-                      <td className="p-2">{g.cargo}</td>
-                      <td className="p-2">{g.reclutado === "Sí" ? "✅" : "❌"}</td>
-                      <td className="p-2">{g.fechaRegistro} {g.horaRegistro}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    ReactDOM.createRoot(document.getElementById("root")).render(<RecruitmentApp />);
-  </script>
+      const result = await searchCandidates(query);
+      if (result.success) {
+        renderResults(result.data);
+      } else {
+        document.getElementById("results").innerHTML = `<p class="text-red-500">❌ Error: ${result.error}</p>`;
+      }
+    });
+  </script>
 </body>
 </html>
