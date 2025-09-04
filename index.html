@@ -14,8 +14,6 @@
     .ai-gradient { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
     .ai-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
     @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.7;} }
-    .thinking { border: 2px solid #667eea; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; }
-    @keyframes spin {0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
   </style>
 </head>
 <body class="min-h-screen" style="background-color:#002338;">
@@ -29,37 +27,6 @@
 
 <main class="max-w-6xl mx-auto bg-white shadow-lg rounded-xl p-6 mt-6">
   <h1 class="text-2xl font-bold mb-4 text-center text-gray-800">📋 Sistema de Reclutamiento con IA</h1>
-
-  <!-- Panel de IA -->
-  <div class="ai-gradient rounded-lg mb-4 overflow-hidden shadow-lg">
-    <div class="p-3 cursor-pointer flex justify-between items-center" onclick="toggleAIPanel()">
-      <div class="flex items-center gap-3">
-        <div class="w-6 h-6 bg-white rounded-full ai-pulse flex items-center justify-center"><span class="text-purple-600 text-sm font-bold">AI</span></div>
-        <h3 class="font-bold text-white">Asistente de IA para Reclutamiento</h3>
-      </div>
-      <span id="aiArrow" class="transform transition-transform text-white">▼</span>
-    </div>
-    <div id="aiContent" class="p-4 bg-white hidden">
-      <button onclick="smartSearch()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded w-full">🔎 Búsqueda Inteligente IA</button>
-      <div id="aiResults" class="bg-gray-50 rounded-lg p-4 hidden mt-4">
-        <h4 class="font-bold text-gray-800">Resultados IA</h4>
-        <div id="aiResultsContent" class="space-y-3"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Panel Debug -->
-  <div class="bg-gray-100 rounded-lg mb-4 overflow-hidden">
-    <div class="p-3 bg-gray-200 cursor-pointer flex justify-between items-center" onclick="toggleDebugPanel()">
-      <h3 class="font-bold text-gray-700">🔧 Panel de Debug</h3>
-      <span id="debugArrow" class="transform transition-transform">▼</span>
-    </div>
-    <div id="debugContent" class="p-4 hidden">
-      <div id="debugInfo" class="text-sm text-gray-600 max-h-40 overflow-y-auto"></div>
-      <button id="testApiBtn" class="bg-blue-500 text-white px-4 py-2 rounded mt-2 hover:bg-blue-600">Probar conexión a API</button>
-      <button id="clearDebugBtn" class="bg-gray-500 text-white px-4 py-2 rounded mt-2 ml-2 hover:bg-gray-600">Limpiar Log</button>
-    </div>
-  </div>
 
   <!-- Buscador -->
   <div class="mb-6 flex gap-2">
@@ -85,7 +52,7 @@
     </div>
     <div class="overflow-x-auto">
       <table class="w-full text-sm bg-white rounded-lg shadow">
-        <thead class="bg-gray-200"><tr><th class="p-3">Nombre</th><th class="p-3">RUT</th><th class="p-3">Cargo</th><th class="p-3">Estado</th><th class="p-3">Motivo</th><th class="p-3">Fecha/Hora</th></tr></thead>
+        <thead class="bg-gray-200"><tr><th class="p-3">Nombre</th><th class="p-3">RUT</th><th class="p-3">Cargo</th><th class="p-3">Estado</th><th class="p-3">Motivo</th><th class="p-3">Fecha/Hora</th><th class="p-3">Score IA</th></tr></thead>
         <tbody id="historialBody"></tbody>
       </table>
     </div>
@@ -108,17 +75,13 @@
 const SHEETDB_API_URL = "https://sheetdb.io/api/v1/arqvckj0fb8af";
 let gestiones = [], currentCandidates = [];
 
-function updateDebugInfo(msg){const d=document.getElementById("debugInfo");d.innerHTML+=`<div>${new Date().toLocaleTimeString()}: ${msg}</div>`;d.scrollTop=d.scrollHeight;}
-function toggleDebugPanel(){const c=document.getElementById("debugContent"),a=document.getElementById("debugArrow");c.classList.toggle("hidden");a.style.transform=c.classList.contains("hidden")?"rotate(0)":"rotate(180deg)";}
-function toggleAIPanel(){const c=document.getElementById("aiContent"),a=document.getElementById("aiArrow");c.classList.toggle("hidden");a.style.transform=c.classList.contains("hidden")?"rotate(0)":"rotate(180deg)";}
+async function searchCandidates(q){try{const r=await fetch(SHEETDB_API_URL);const all=await r.json();const s=q.trim().toLowerCase();const f=all.filter(c=>[c.NOMBRE,c.APELLIDO,c.RUT,c.CARGO,c.EMAIL,c.TELEFONO,c["FECHA DE POSTULACION"],c.COMUNA,c.EMPRESA].some(v=>v&&v.toLowerCase().includes(s)));currentCandidates=f;renderResults(f);}catch(e){alert("Error búsqueda: "+e.message);}}
 
-async function testAPI(){updateDebugInfo("Probar API...");try{const r=await fetch(SHEETDB_API_URL);if(!r.ok)throw new Error(r.statusText);const data=await r.json();currentCandidates=data;updateDebugInfo(`OK ${data.length} registros`);renderResults(data.slice(0,5));}catch(e){updateDebugInfo(`Error: ${e.message}`);}}
+async function smartSearch(){const q=document.getElementById("searchInput").value;if(q.length<2){alert("Escribe al menos 2 caracteres");return;}try{const r=await fetch(SHEETDB_API_URL);const all=await r.json();const s=q.trim().toLowerCase();let scored=all.map(c=>{let score=0;[c.NOMBRE,c.APELLIDO,c.RUT,c.CARGO,c.EMAIL,c.TELEFONO,c["FECHA DE POSTULACION"],c.COMUNA,c.EMPRESA].forEach(v=>{if(v&&v.toLowerCase().includes(s))score+=1;});return {...c,score};});scored=scored.filter(c=>c.score>0).sort((a,b)=>b.score-a.score);currentCandidates=scored;renderResults(scored,true);}catch(e){alert("Error IA: "+e.message);}}
 
-async function searchCandidates(q){updateDebugInfo(`Buscar: ${q}`);try{const r=await fetch(SHEETDB_API_URL);if(!r.ok)throw new Error(r.statusText);const all=await r.json();const s=q.trim().toLowerCase();const f=all.filter(c=>[c.NOMBRE,c.APELLIDO,c.RUT,c.CARGO,c.EMAIL,c.TELEFONO,c["FECHA DE POSTULACION"],c.COMUNA,c.EMPRESA].some(v=>v&&v.toLowerCase().includes(s)));currentCandidates=f;renderResults(f);}catch(e){updateDebugInfo(`Error búsqueda: ${e.message}`);}}
+function renderResults(data,isIA=false){const d=document.getElementById("results");d.innerHTML="";if(!data.length){d.innerHTML="<p>No hay resultados</p>";return;}data.forEach(c=>{const card=document.createElement("div");card.className="p-4 rounded-lg shadow-sm text-white cursor-pointer";card.style.background="#77c25c";card.innerHTML=`<p><b>${c.NOMBRE||''} ${c.APELLIDO||''}</b> - ${c.CARGO||''}</p><p>${c.RUT||''} | ${c.EMAIL||''}</p>${isIA?`<p><b>Score IA:</b> ${c.score}</p>`:''}`;card.onclick=()=>openFicha(c);d.appendChild(card);addHistorial(c,isIA?c.score:"");});document.getElementById("historialSection").classList.remove("hidden");}
 
-async function smartSearch(){const q=document.getElementById("searchInput").value;if(q.length<2){alert("Escribe al menos 2 caracteres");return;}updateDebugInfo(`🤖 Búsqueda IA: ${q}`);try{const r=await fetch(SHEETDB_API_URL);const all=await r.json();const s=q.trim().toLowerCase();let scored=all.map(c=>{let score=0;[c.NOMBRE,c.APELLIDO,c.RUT,c.CARGO,c.EMAIL,c.TELEFONO,c["FECHA DE POSTULACION"],c.COMUNA,c.EMPRESA].forEach(v=>{if(v&&v.toLowerCase().includes(s))score+=1;});return {...c,score};});scored=scored.filter(c=>c.score>0).sort((a,b)=>b.score-a.score);currentCandidates=scored;renderResults(scored);document.getElementById("aiResults").classList.remove("hidden");document.getElementById("aiResultsContent").innerHTML=scored.map(c=>`<div class='p-2 bg-white rounded shadow'><b>${c.NOMBRE||''} ${c.APELLIDO||''}</b> (${c.CARGO||''}) - Score ${c.score}</div>`).join("");}catch(e){updateDebugInfo(`Error IA: ${e.message}`);}}
-
-function renderResults(data){const d=document.getElementById("results");d.innerHTML="";if(!data.length){d.innerHTML="<p>No hay resultados</p>";return;}data.forEach(c=>{const card=document.createElement("div");card.className="p-4 rounded-lg shadow-sm text-white cursor-pointer";card.style.background="#77c25c";card.innerHTML=`<p><b>${c.NOMBRE||''} ${c.APELLIDO||''}</b> - ${c.CARGO||''}</p><p>${c.RUT||''} | ${c.EMAIL||''}</p>`;card.onclick=()=>openFicha(c);d.appendChild(card);});}
+function addHistorial(c,scoreIA){const body=document.getElementById("historialBody");const row=document.createElement("tr");row.innerHTML=`<td class='p-2'>${c.NOMBRE||''} ${c.APELLIDO||''}</td><td class='p-2'>${c.RUT||''}</td><td class='p-2'>${c.CARGO||''}</td><td class='p-2'>-</td><td class='p-2'>-</td><td class='p-2'>${new Date().toLocaleString()}</td><td class='p-2'>${scoreIA}</td>`;body.appendChild(row);gestiones.push({Nombre:c.NOMBRE||'',RUT:c.RUT||'',Cargo:c.CARGO||'',Estado:'-',Motivo:'-',FechaHora:new Date().toLocaleString(),ScoreIA:scoreIA});}
 
 // Modal Ficha
 function openFicha(c){document.getElementById("modalFicha").classList.remove("hidden");document.getElementById("fichaContent").innerHTML=`<p><b>Nombre:</b> ${c.NOMBRE||''} ${c.APELLIDO||''}</p><p><b>RUT:</b> ${c.RUT||''}</p><p><b>Cargo:</b> ${c.CARGO||''}</p><p><b>Email:</b> ${c.EMAIL||''}</p><p><b>Teléfono:</b> ${c.TELEFONO||''}</p><p><b>Comuna:</b> ${c.COMUNA||''}</p><p><b>Empresa:</b> ${c.EMPRESA||''}</p><p><b>Fecha de Postulación:</b> ${c["FECHA DE POSTULACION"]||''}</p>`;}
@@ -132,12 +95,8 @@ async function downloadPDF(){if(!gestiones.length){alert("No hay datos");return;
 document.getElementById("searchBtn").addEventListener("click",()=>{const q=document.getElementById("searchInput").value;if(q.length>=2)searchCandidates(q);});
 document.getElementById("searchInput").addEventListener("keydown",e=>{if(e.key==="Enter")document.getElementById("searchBtn").click();});
 document.getElementById("smartSearchBtn").addEventListener("click",smartSearch);
-document.getElementById("testApiBtn").addEventListener("click",testAPI);
-document.getElementById("clearDebugBtn").addEventListener("click",()=>document.getElementById("debugInfo").innerHTML="");
 document.getElementById("downloadExcelBtn").addEventListener("click",downloadExcel);
 document.getElementById("downloadPdfBtn").addEventListener("click",downloadPDF);
-
-window.addEventListener('load',()=>updateDebugInfo("Sistema iniciado"));
 </script>
 
 </body>
