@@ -642,6 +642,10 @@
               </div>
             </div>
             ${candidato["ENLACE CV"] ? `<p class="mt-2"><strong>CV:</strong> <a href="${candidato["ENLACE CV"]}" target="_blank" class="underline">📄 Ver Curriculum</a></p>` : ""}
+            <div id="ai-analysis-${candidato.RUT}" class="mt-4 p-3 bg-blue-100 border border-blue-300 rounded-md text-black">
+              <p class="font-bold text-blue-800">Análisis de IA:</p>
+              <p class="text-sm text-blue-700">Cargando análisis...</p>
+            </div>
           </div>
           <div class="flex flex-col gap-2 ml-4">
             ${candidato["ENLACE CV"] ? `
@@ -678,6 +682,9 @@
           </div>
         `;
         resultsDiv.appendChild(card);
+
+        // Llamar a la función de análisis de IA para cada candidato
+        runAIAnalysisForCandidate(candidato);
       });
     }
 
@@ -856,6 +863,53 @@
     window.hideApplicationForm = function() {
       document.getElementById('formularioModal').classList.add('hidden');
     };
+
+    // =========================================================================
+    // ===== FUNCIÓN PARA ANÁLISIS DE CANDIDATO CON IA =====
+    // =========================================================================
+    async function analyzeCandidateWithAI(candidato) {
+        const AI_ANALYSIS_API_URL = "URL_DE_TU_API_DE_IA_AQUI"; 
+        updateDebugInfo(`🧠 Enviando datos de ${candidato.NOMBRE} a la IA para análisis...`);
+
+        // Datos de ejemplo para simular la respuesta de una API de IA
+        const simulatedAnalysis = {
+            score: Math.floor(Math.random() * 100) + 1, // Puntaje aleatorio entre 1 y 100
+            resumen: "Este candidato tiene un perfil general que se ajusta a las necesidades del puesto. Su experiencia es relevante y sus habilidades coinciden con los requisitos del trabajo. Es recomendable seguir con el proceso de entrevista para confirmar sus aptitudes.",
+        };
+        
+        // Simular una llamada asíncrona a la API
+        return new Promise(resolve => {
+            setTimeout(() => {
+                updateDebugInfo(`✅ Análisis de IA recibido: ${JSON.stringify(simulatedAnalysis)}`);
+                resolve(simulatedAnalysis);
+            }, 1500); // 1.5 segundos de retraso para simular la carga
+        });
+    }
+
+    // =========================================================================
+    // ===== FUNCIÓN QUE EJECUTA Y MUESTRA EL ANÁLISIS DE IA =====
+    // =========================================================================
+    async function runAIAnalysisForCandidate(candidato) {
+        const analysisResultDiv = document.getElementById(`ai-analysis-${candidato.RUT}`);
+        
+        if (!analysisResultDiv) {
+            updateDebugInfo(`❌ No se encontró el contenedor de análisis para ${candidato.RUT}`);
+            return;
+        }
+        
+        const analysis = await analyzeCandidateWithAI(candidato);
+        
+        const score = analysis.score || 'N/A';
+        const resumen = analysis.resumen || 'Análisis no disponible.';
+        
+        const scoreColor = (score > 80) ? 'text-green-800' : (score > 50) ? 'text-yellow-800' : 'text-red-800';
+        
+        analysisResultDiv.innerHTML = `
+            <p class="font-bold text-blue-800">Análisis de IA:</p>
+            <p class="text-sm">Puntaje de Compatibilidad: <span class="font-bold ${scoreColor}">${score}%</span></p>
+            <p class="text-sm">Resumen: ${resumen}</p>
+        `;
+    }
 
     // =========================================================================
     // ===== NUEVA FUNCIÓN PARA DESCARGAR LA FICHA COMPLETA COMO PDF =====
