@@ -76,7 +76,13 @@
 
   <!-- Historial -->
   <div id="historialSection" class="bg-gray-50 rounded-lg p-4 hidden">
-    <h2 class="text-xl font-bold text-gray-800 mb-4">📊 Historial de Gestiones</h2>
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-xl font-bold text-gray-800">📊 Historial de Gestiones</h2>
+      <div class="flex gap-2">
+        <button id="downloadExcelBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm">📊 Descargar Excel</button>
+        <button id="downloadPdfBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm">📄 Descargar PDF</button>
+      </div>
+    </div>
     <div class="overflow-x-auto">
       <table class="w-full text-sm bg-white rounded-lg shadow">
         <thead class="bg-gray-200"><tr><th class="p-3">Nombre</th><th class="p-3">RUT</th><th class="p-3">Cargo</th><th class="p-3">Estado</th><th class="p-3">Motivo</th><th class="p-3">Fecha/Hora</th></tr></thead>
@@ -86,12 +92,25 @@
   </div>
 </main>
 
+<!-- Modal Ficha -->
+<div id="modalFicha" class="modal-overlay hidden">
+  <div class="bg-white p-6 rounded-lg shadow-lg max-w-2xl w-full modal-content">
+    <h2 class="text-xl font-bold mb-4">📄 Ficha de Postulación</h2>
+    <div id="fichaContent" class="space-y-2"></div>
+    <div class="flex justify-end mt-4 gap-2">
+      <button onclick="downloadFichaPDF()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">📄 Imprimir Ficha</button>
+      <button onclick="closeFicha()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const SHEETDB_API_URL = "https://sheetdb.io/api/v1/arqvckj0fb8af";
 let gestiones = [], currentCandidates = [];
 
 function updateDebugInfo(msg){const d=document.getElementById("debugInfo");d.innerHTML+=`<div>${new Date().toLocaleTimeString()}: ${msg}</div>`;d.scrollTop=d.scrollHeight;}
 function toggleDebugPanel(){const c=document.getElementById("debugContent"),a=document.getElementById("debugArrow");c.classList.toggle("hidden");a.style.transform=c.classList.contains("hidden")?"rotate(0)":"rotate(180deg)";}
+function toggleAIPanel(){const c=document.getElementById("aiContent"),a=document.getElementById("aiArrow");c.classList.toggle("hidden");a.style.transform=c.classList.contains("hidden")?"rotate(0)":"rotate(180deg)";}
 
 async function testAPI(){updateDebugInfo("Probar API...");try{const r=await fetch(SHEETDB_API_URL);if(!r.ok)throw new Error(r.statusText);const data=await r.json();currentCandidates=data;updateDebugInfo(`OK ${data.length} registros`);renderResults(data.slice(0,5));}catch(e){updateDebugInfo(`Error: ${e.message}`);}}
 
@@ -99,13 +118,24 @@ async function searchCandidates(q){updateDebugInfo(`Buscar: ${q}`);try{const r=a
 
 async function smartSearch(){const q=document.getElementById("searchInput").value;if(q.length<2){alert("Escribe al menos 2 caracteres");return;}updateDebugInfo(`🤖 Búsqueda IA: ${q}`);try{const r=await fetch(SHEETDB_API_URL);const all=await r.json();const s=q.trim().toLowerCase();let scored=all.map(c=>{let score=0;[c.NOMBRE,c.APELLIDO,c.RUT,c.CARGO,c.EMAIL,c.TELEFONO,c["FECHA DE POSTULACION"],c.COMUNA,c.EMPRESA].forEach(v=>{if(v&&v.toLowerCase().includes(s))score+=1;});return {...c,score};});scored=scored.filter(c=>c.score>0).sort((a,b)=>b.score-a.score);currentCandidates=scored;renderResults(scored);document.getElementById("aiResults").classList.remove("hidden");document.getElementById("aiResultsContent").innerHTML=scored.map(c=>`<div class='p-2 bg-white rounded shadow'><b>${c.NOMBRE||''} ${c.APELLIDO||''}</b> (${c.CARGO||''}) - Score ${c.score}</div>`).join("");}catch(e){updateDebugInfo(`Error IA: ${e.message}`);}}
 
-function renderResults(data){const d=document.getElementById("results");d.innerHTML="";if(!data.length){d.innerHTML="<p>No hay resultados</p>";return;}data.forEach(c=>{const card=document.createElement("div");card.className="p-4 rounded-lg shadow-sm text-white";card.style.background="#77c25c";card.innerHTML=`<p><b>${c.NOMBRE||''} ${c.APELLIDO||''}</b> - ${c.CARGO||''}</p><p>${c.RUT||''} | ${c.EMAIL||''}</p>`;d.appendChild(card);});}
+function renderResults(data){const d=document.getElementById("results");d.innerHTML="";if(!data.length){d.innerHTML="<p>No hay resultados</p>";return;}data.forEach(c=>{const card=document.createElement("div");card.className="p-4 rounded-lg shadow-sm text-white cursor-pointer";card.style.background="#77c25c";card.innerHTML=`<p><b>${c.NOMBRE||''} ${c.APELLIDO||''}</b> - ${c.CARGO||''}</p><p>${c.RUT||''} | ${c.EMAIL||''}</p>`;card.onclick=()=>openFicha(c);d.appendChild(card);});}
+
+// Modal Ficha
+function openFicha(c){document.getElementById("modalFicha").classList.remove("hidden");document.getElementById("fichaContent").innerHTML=`<p><b>Nombre:</b> ${c.NOMBRE||''} ${c.APELLIDO||''}</p><p><b>RUT:</b> ${c.RUT||''}</p><p><b>Cargo:</b> ${c.CARGO||''}</p><p><b>Email:</b> ${c.EMAIL||''}</p><p><b>Teléfono:</b> ${c.TELEFONO||''}</p><p><b>Comuna:</b> ${c.COMUNA||''}</p><p><b>Empresa:</b> ${c.EMPRESA||''}</p><p><b>Fecha de Postulación:</b> ${c["FECHA DE POSTULACION"]||''}</p>`;}
+function closeFicha(){document.getElementById("modalFicha").classList.add("hidden");}
+async function downloadFichaPDF(){const { jsPDF } = window.jspdf;const doc=new jsPDF();await html2canvas(document.getElementById("fichaContent")).then(c=>{const img=c.toDataURL("image/png");doc.addImage(img,"PNG",10,10,180,0);doc.save("ficha_postulacion.pdf");});}
+
+// Excel y PDF historial
+function downloadExcel(){if(!gestiones.length){alert("No hay datos");return;}const ws=XLSX.utils.json_to_sheet(gestiones);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Historial");XLSX.writeFile(wb,"historial.xlsx");}
+async function downloadPDF(){if(!gestiones.length){alert("No hay datos");return;}const { jsPDF } = window.jspdf;const doc=new jsPDF();await html2canvas(document.getElementById("historialSection")).then(c=>{const img=c.toDataURL("image/png");doc.addImage(img,"PNG",10,10,190,0);doc.save("historial.pdf");});}
 
 document.getElementById("searchBtn").addEventListener("click",()=>{const q=document.getElementById("searchInput").value;if(q.length>=2)searchCandidates(q);});
 document.getElementById("searchInput").addEventListener("keydown",e=>{if(e.key==="Enter")document.getElementById("searchBtn").click();});
 document.getElementById("smartSearchBtn").addEventListener("click",smartSearch);
 document.getElementById("testApiBtn").addEventListener("click",testAPI);
 document.getElementById("clearDebugBtn").addEventListener("click",()=>document.getElementById("debugInfo").innerHTML="");
+document.getElementById("downloadExcelBtn").addEventListener("click",downloadExcel);
+document.getElementById("downloadPdfBtn").addEventListener("click",downloadPDF);
 
 window.addEventListener('load',()=>updateDebugInfo("Sistema iniciado"));
 </script>
