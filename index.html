@@ -3,101 +3,1114 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sistema de Reclutamiento con IA - Grupo Norte</title>
+  <title>Sistema de Reclutamiento - Grupo Norte</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
-    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-    .modal-content { max-height: 90vh; overflow-y: auto; }
-    .ai-gradient { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-    .ai-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.7;} }
+    /* Estilos para el modal de la ficha de postulación */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      max-height: 90vh;
+      overflow-y: auto;
+    }
   </style>
 </head>
 <body class="min-h-screen" style="background-color:#002338;">
 
-<header class="w-full py-4" style="background-color:#002338;">
-  <div class="max-w-5xl mx-auto flex justify-center items-center gap-6">
-    <img src="https://github.com/AnalistaGn/dashboard-gn-e/blob/main/Grupo%20%5E%20Norte_%20Creamos%20.png?raw=true" alt="Grupo Norte" class="h-16 object-contain" />
-    <img src="https://github.com/AnalistaGn/dashboard-gn-e/blob/main/Norti%CC%81n%20Verde.png?raw=true" alt="Nortín Verde" class="h-16 object-contain" />
-  </div>
-</header>
+  <header class="w-full py-4" style="background-color:#002338;">
+    <div class="max-w-5xl mx-auto flex justify-center items-center gap-6">
+      <img src="https://github.com/AnalistaGn/dashboard-gn-e/blob/main/Grupo%20%5E%20Norte_%20Creamos%20.png?raw=true" 
+           alt="Grupo Norte" class="h-16 object-contain" />
+      <img src="https://github.com/AnalistaGn/dashboard-gn-e/blob/main/Norti%CC%81n%20Verde.png?raw=true" 
+           alt="Nortín Verde" class="h-16 object-contain" />
+    </div>
+  </header>
 
-<main class="max-w-6xl mx-auto bg-white shadow-lg rounded-xl p-6 mt-6">
-  <h1 class="text-2xl font-bold mb-4 text-center text-gray-800">📋 Sistema de Reclutamiento con IA</h1>
+  <main class="max-w-6xl mx-auto bg-white shadow-lg rounded-xl p-6 mt-6">
+    <h1 class="text-2xl font-bold mb-4 text-center text-gray-800">📋 Sistema de Reclutamiento</h1>
 
-  <!-- Buscador -->
-  <div class="mb-6 flex gap-2">
-    <input id="searchInput" type="text" placeholder="Escribe nombre, RUT, cargo, email, teléfono, comuna, empresa o fecha..." class="flex-grow p-3 border rounded-lg focus:ring focus:ring-green-300" />
-    <button id="searchBtn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded">Buscar</button>
-    <button id="smartSearchBtn" class="ai-gradient text-white px-6 py-2 rounded">IA</button>
-  </div>
-
-  <!-- Resultados -->
-  <div class="bg-gray-50 rounded-lg p-4 mb-6">
-    <h2 class="text-xl font-bold mb-4 text-gray-800">Candidatos Encontrados</h2>
-    <div id="results" class="space-y-3"></div>
-  </div>
-
-  <!-- Historial -->
-  <div id="historialSection" class="bg-gray-50 rounded-lg p-4 hidden">
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-xl font-bold text-gray-800">📊 Historial de Gestiones</h2>
-      <div class="flex gap-2">
-        <button id="downloadExcelBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm">📊 Descargar Excel</button>
-        <button id="downloadPdfBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm">📄 Descargar PDF</button>
+    <div class="bg-gray-100 rounded-lg mb-4 overflow-hidden">
+      <div class="p-3 bg-gray-200 cursor-pointer flex justify-between items-center" onclick="toggleDebugPanel()">
+        <h3 class="font-bold text-gray-700">🔧 Panel de Debug</h3>
+        <span id="debugArrow" class="transform transition-transform">▼</span>
+      </div>
+      <div id="debugContent" class="p-4 hidden">
+        <div id="debugInfo" class="text-sm text-gray-600 max-h-40 overflow-y-auto"></div>
+        <button id="testApiBtn" class="bg-blue-500 text-white px-4 py-2 rounded mt-2 hover:bg-blue-600">
+          🔍 Probar conexión a API
+        </button>
+        <button id="clearDebugBtn" class="bg-gray-500 text-white px-4 py-2 rounded mt-2 ml-2 hover:bg-gray-600">
+          🗑️ Limpiar Log
+        </button>
       </div>
     </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm bg-white rounded-lg shadow">
-        <thead class="bg-gray-200"><tr><th class="p-3">Nombre</th><th class="p-3">RUT</th><th class="p-3">Cargo</th><th class="p-3">Estado</th><th class="p-3">Motivo</th><th class="p-3">Fecha/Hora</th><th class="p-3">Score IA</th></tr></thead>
-        <tbody id="historialBody"></tbody>
-      </table>
+
+    <div class="mb-6 flex gap-2">
+      <input 
+        type="text" 
+        id="searchInput" 
+        placeholder="Escribe nombre, RUT, cargo, email, teléfono, comuna, empresa o fecha..." 
+        class="flex-grow p-3 border rounded-lg focus:ring focus:ring-green-300"
+      />
+      <button id="searchBtn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded">
+        🔍 Buscar
+      </button>
+    </div>
+
+    <div class="bg-gray-50 rounded-lg p-4 mb-6">
+      <h2 class="text-xl font-bold mb-4 text-gray-800">Candidatos Encontrados</h2>
+      <div id="results" class="space-y-3"></div>
+    </div>
+
+    <div id="historialSection" class="bg-gray-50 rounded-lg p-4 hidden">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold text-gray-800">📊 Historial de Gestiones</h2>
+        <div class="flex gap-2">
+          <button id="downloadExcelBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm">
+            📊 Descargar Excel
+          </button>
+          <button id="downloadPdfBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm">
+            📄 Descargar PDF
+          </button>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm bg-white rounded-lg shadow">
+          <thead class="bg-gray-200">
+            <tr>
+              <th class="p-3 text-left">Nombre</th>
+              <th class="p-3 text-left">RUT</th>
+              <th class="p-3 text-left">Cargo</th>
+              <th class="p-3 text-left">Estado</th>
+              <th class="p-3 text-left">Motivo</th>
+              <th class="p-3 text-left">Fecha/Hora</th>
+            </tr>
+          </thead>
+          <tbody id="historialBody">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+  
+  <div id="formularioModal" class="modal-overlay hidden">
+    <div class="modal-content bg-white text-black p-6 rounded-lg shadow-xl w-full max-w-4xl relative">
+      <div class="absolute top-3 right-4 flex gap-2">
+        <button id="downloadFichaBtn" onclick="downloadFichaPDF()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm">
+            📄 Descargar Ficha
+        </button>
+        <button onclick="hideApplicationForm()" class="text-gray-600 hover:text-black text-2xl font-bold leading-none">&times;</button>
+      </div>
+
+      <div id="formularioPostulacion">
+        <div class="border-2 border-black bg-white">
+          <div class="flex items-center border-b-2 border-black">
+            <div class="p-4 border-r-2 border-black">
+              <div class="font-bold text-lg">GRUPO NORTE</div>
+            </div>
+            <div class="flex-1 text-center p-4">
+              <div class="font-bold">FICHA DE POSTULACIÓN E INGRESO</div>
+              <div class="text-sm">SELECCIÓN Y RECLUTAMIENTO</div>
+            </div>
+            <div class="p-4 border-l-2 border-black text-sm">
+              <div>FE-06</div>
+              <div>Versión: 04</div>
+              <div>Fecha: 13-03-2025</div>
+            </div>
+          </div>
+
+          <div class="p-4 space-y-4">
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span class="font-bold">Fecha de Postulación:</span>
+                <span id="form-fecha-postulacion" class="ml-2 border-b border-black inline-block w-32 text-center"></span>
+              </div>
+              <div>
+                <span class="font-bold">Cargo:</span>
+                <span id="form-cargo" class="ml-2 border-b border-black inline-block w-40 text-center"></span>
+              </div>
+            </div>
+
+            <div class="text-sm">
+              <span class="font-bold">NOMBRE COMPLETO:</span>
+              <span id="form-nombre" class="ml-2 border-b border-black inline-block w-80 text-center"></span>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <span class="font-bold">RUT:</span>
+                <span id="form-rut" class="ml-2 border-b border-black inline-block w-28 text-center"></span>
+              </div>
+              <div>
+                <span class="font-bold">Estado Civil:</span>
+                <span id="form-estado-civil" class="ml-2 border-b border-black inline-block w-24 text-center"></span>
+              </div>
+              <div>
+                <span class="font-bold">Fecha de Nacimiento:</span>
+                <span id="form-fecha-nacimiento" class="ml-2 border-b border-black inline-block w-28 text-center"></span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-4 gap-4 text-sm">
+              <div>
+                <span class="font-bold">Edad:</span>
+                <span id="form-edad" class="ml-2 border-b border-black inline-block w-12 text-center"></span>
+              </div>
+              <div>
+                <span class="font-bold">Nacionalidad:</span>
+                <span id="form-nacionalidad" class="ml-2 border-b border-black inline-block w-20 text-center"></span>
+              </div>
+              <div>
+                <span class="font-bold">Visa:</span>
+                <span id="form-visa" class="ml-2 border-b border-black inline-block w-20 text-center"></span>
+              </div>
+              <div>
+                <span class="font-bold">N° Cargas Familiares:</span>
+                <span id="form-cargas" class="ml-2 border-b border-black inline-block w-12 text-center"></span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span class="font-bold">Dirección:</span>
+                <span id="form-direccion" class="ml-2 border-b border-black inline-block w-48 text-center"></span>
+              </div>
+              <div>
+                <span class="font-bold">Casa o Dpto.:</span>
+                <span class="ml-2 border-b border-black inline-block w-32"></span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <span class="font-bold">Población o Villa:</span>
+                <span id="form-poblacion" class="ml-2 border-b border-black inline-block w-32 text-center"></span>
+              </div>
+              <div>
+                <span class="font-bold">Comuna:</span>
+                <span id="form-comuna" class="ml-2 border-b border-black inline-block w-32 text-center"></span>
+              </div>
+              <div>
+                <span class="font-bold">Ciudad:</span>
+                <span id="form-ciudad" class="ml-2 border-b border-black inline-block w-32 text-center"></span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span class="font-bold">Celular Personal:</span>
+                <span id="form-telefono" class="ml-2 border-b border-black inline-block w-32 text-center"></span>
+              </div>
+              <div>
+                <span class="font-bold">Correo Electrónico:</span>
+                <span id="form-email" class="ml-2 border-b border-black inline-block w-48 text-center"></span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span class="font-bold">Celular emergencia:</span>
+                <span class="ml-2 border-b border-black inline-block w-32"></span>
+              </div>
+              <div>
+                <span class="font-bold">Nombre Emergencia:</span>
+                <span class="ml-2 border-b border-black inline-block w-48"></span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4 text-sm">
+              <div>
+                <span class="font-bold">BANCO:</span>
+                <span class="ml-2 border-b border-black inline-block w-32"></span>
+              </div>
+              <div>
+                <span class="font-bold">TIPO DE CUENTA:</span>
+                <span class="ml-2 border-b border-black inline-block w-32"></span>
+              </div>
+              <div>
+                <span class="font-bold">N° DE CUENTA:</span>
+                <span class="ml-2 border-b border-black inline-block w-32"></span>
+              </div>
+            </div>
+
+            <div class="space-y-2 text-sm">
+              <div>
+                <span class="font-bold">Tiene algún tipo de discapacidad:</span>
+                <span class="ml-4">SI ☐ NO ☐</span>
+                <span class="ml-4 font-bold">¿Cuál?</span>
+                <span class="ml-2 border-b border-black inline-block w-32"></span>
+              </div>
+              <div>
+                <span class="font-bold">¿Tiene credencial de discapacidad?</span>
+                <span class="ml-4">SI ☐ NO ☐</span>
+              </div>
+            </div>
+
+            <div class="space-y-2 text-sm">
+              <div>
+                <span class="font-bold">Posee Curso OS 10 Vigente:</span>
+                <span class="ml-4">SI ☐ NO ☐</span>
+                <span class="ml-4 font-bold">Otros Cursos:</span>
+                <span class="ml-2 border-b border-black inline-block w-48"></span>
+              </div>
+              <div>
+                <span class="font-bold">Experiencia en maquinaria de limpieza:</span>
+                <span class="ml-4">SI ☐ NO ☐</span>
+                <span class="ml-4 font-bold">¿Cuál?</span>
+                <span class="ml-2 border-b border-black inline-block w-48"></span>
+              </div>
+            </div>
+
+            <div class="text-sm">
+              <span class="font-bold">Turno que desea trabajar: (Marque con una X)</span>
+              <span class="ml-4">Día ☐ Noche ☐</span>
+            </div>
+
+            <div class="border-t-2 border-black pt-4">
+              <div class="font-bold text-sm mb-2">EXPERIENCIA LABORAL</div>
+              <div class="grid grid-cols-4 gap-4 text-sm border-b border-black pb-2">
+                <div class="font-bold">Nombre de la Empresa</div>
+                <div class="font-bold">Cargo anterior</div>
+                <div class="font-bold">Última renta</div>
+                <div class="font-bold">Causa de Retiro</div>
+              </div>
+              <div class="grid grid-cols-4 gap-4 text-sm pt-2">
+                <div class="border-b border-black h-8"></div>
+                <div class="border-b border-black h-8"></div>
+                <div class="border-b border-black h-8">$</div>
+                <div class="border-b border-black h-8"></div>
+              </div>
+            </div>
+
+            <div class="border-t border-black pt-4">
+              <div class="font-bold text-sm mb-2">Recomendaciones</div>
+              <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span class="font-bold">Nombre y Apellido:</span>
+                  <span class="ml-2 border-b border-black inline-block w-48"></span>
+                </div>
+                <div>
+                  <span class="font-bold">Teléfono:</span>
+                  <span class="ml-2 border-b border-black inline-block w-32"></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="border-t border-black pt-4">
+              <div class="font-bold text-sm mb-2">ANTECEDENTES PREVISIONALES</div>
+              <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>ISAPRE ☐</div>
+                <div>FONASA ☐</div>
+                <div>A.F.P. ☐</div>
+                <div>I.N.P. ☐</div>
+              </div>
+            </div>
+
+            <div class="border-t border-black pt-4">
+              <div class="font-bold text-sm mb-2">OTROS DATOS PERSONALES</div>
+              <div class="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span class="font-bold">TALLA DE POLERA:</span>
+                  <span class="ml-2 border-b border-black inline-block w-16"></span>
+                </div>
+                <div>
+                  <span class="font-bold">OTRAS ESPECIFICACIONES:</span>
+                  <span class="ml-2 border-b border-black inline-block w-32"></span>
+                </div>
+                <div>
+                  <span class="font-bold">TALLA DE PANTALON:</span>
+                  <span class="ml-2 border-b border-black inline-block w-16"></span>
+                </div>
+                <div>
+                  <span class="font-bold">N° DE CALZADO:</span>
+                  <span class="ml-2 border-b border-black inline-block w-16"></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="border-t border-black pt-4 text-xs">
+              <p class="mb-2">
+                Las funciones que realizará en la empresa, en algunos casos, exige esfuerzos que pueden resultar perjudiciales
+                para su salud, le pedimos indicar si padece de alguna(s) de la(s) afección(es): (Marque con una X sólo si
+                corresponde, de lo contrario no haga ninguna marca)
+              </p>
+              <div class="grid grid-cols-3 gap-4 text-sm">
+                <div>Lumbago ☐</div>
+                <div>Artritis ☐</div>
+                <div>Presión Arterial ☐</div>
+                <div>Hernias y/o Várices ☐</div>
+                <div class="col-span-2">
+                  <span class="font-bold">Otras Afecciones, ¿cuál?</span>
+                  <span class="ml-2 border-b border-black inline-block w-48"></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="border-t border-black pt-4 text-center">
+              <div class="text-sm">
+                <span class="font-bold">Firma del Postulante:</span>
+                <span class="ml-4 border-b border-black inline-block w-64"></span>
+              </div>
+            </div>
+            
+            <div class="border-t-4 border-black mt-8 pt-6">
+              <div class="text-center mb-6">
+                <div class="font-bold text-lg">FICHA DE POSTULACIÓN E INGRESO</div>
+                <div class="text-sm">SELECCIÓN Y RECLUTAMIENTO</div>
+                <div class="text-xs mt-2">FE-06 | Versión: 04 | Fecha: 13-03-2025</div>
+              </div>
+
+              <div class="grid grid-cols-3 gap-4 text-sm mb-6">
+                <div>
+                  <span class="font-bold">Fecha de Contratación:</span>
+                  <span class="ml-2 border-b border-black inline-block w-32"></span>
+                </div>
+                <div>
+                  <span class="font-bold">Cliente:</span>
+                  <span class="ml-2 border-b border-black inline-block w-32"></span>
+                </div>
+                <div>
+                  <span class="font-bold">Instalación:</span>
+                  <span class="ml-2 border-b border-black inline-block w-32"></span>
+                </div>
+              </div>
+
+              <div class="mb-6">
+                <div class="font-bold text-sm mb-2">JORNADA LABORAL</div>
+                <div class="border border-black">
+                  <div class="grid grid-cols-4 gap-0 bg-gray-100 border-b border-black">
+                    <div class="border-r border-black p-2 font-bold text-center">DIA</div>
+                    <div class="border-r border-black p-2 font-bold text-center">ENTRADA</div>
+                    <div class="border-r border-black p-2 font-bold text-center">COLACION</div>
+                    <div class="p-2 font-bold text-center">SALIDA</div>
+                  </div>
+                  <div class="grid grid-cols-4 gap-0 border-b border-black text-sm"><div class="border-r border-black p-2 font-medium">LUNES</div><div class="border-r border-black p-2"></div><div class="border-r border-black p-2"></div><div class="p-2"></div></div>
+                  <div class="grid grid-cols-4 gap-0 border-b border-black text-sm"><div class="border-r border-black p-2 font-medium">MARTES</div><div class="border-r border-black p-2"></div><div class="border-r border-black p-2"></div><div class="p-2"></div></div>
+                  <div class="grid grid-cols-4 gap-0 border-b border-black text-sm"><div class="border-r border-black p-2 font-medium">MIERCOLES</div><div class="border-r border-black p-2"></div><div class="border-r border-black p-2"></div><div class="p-2"></div></div>
+                  <div class="grid grid-cols-4 gap-0 border-b border-black text-sm"><div class="border-r border-black p-2 font-medium">JUEVES</div><div class="border-r border-black p-2"></div><div class="border-r border-black p-2"></div><div class="p-2"></div></div>
+                  <div class="grid grid-cols-4 gap-0 border-b border-black text-sm"><div class="border-r border-black p-2 font-medium">VIERNES</div><div class="border-r border-black p-2"></div><div class="border-r border-black p-2"></div><div class="p-2"></div></div>
+                  <div class="grid grid-cols-4 gap-0 border-b border-black text-sm"><div class="border-r border-black p-2 font-medium">SABADO</div><div class="border-r border-black p-2"></div><div class="border-r border-black p-2"></div><div class="p-2"></div></div>
+                  <div class="grid grid-cols-4 gap-0 border-b border-black text-sm"><div class="border-r border-black p-2 font-medium">DOMINGO</div><div class="border-r border-black p-2"></div><div class="border-r border-black p-2"></div><div class="p-2"></div></div>
+                  <div class="grid grid-cols-4 gap-0 border-b border-black text-sm"><div class="border-r border-black p-2 font-medium">OTRO</div><div class="border-r border-black p-2"></div><div class="border-r border-black p-2"></div><div class="p-2"></div></div>
+                </div>
+              </div>
+
+              <div class="mb-6">
+                <div class="font-bold text-sm mb-2">DOCUMENTACION DE RESPALDO OBLIGATORIA (Indique SI/NO)</div>
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                  <div class="flex justify-between items-center"><span>1. FOTOCOPIA CEDULA DE IDENTIDAD</span><span class="border-b border-black inline-block w-16"></span></div>
+                  <div class="flex justify-between items-center"><span>2. CERTIFICADO DE ANTECEDENTES</span><span class="border-b border-black inline-block w-16"></span></div>
+                  <div class="flex justify-between items-center"><span>3. CERTIFICADO DE AFILIACION AFP</span><span class="border-b border-black inline-block w-16"></span></div>
+                  <div class="flex justify-between items-center"><span>4. CERTIFICADO DE AFILIACION SALUD</span><span class="border-b border-black inline-block w-16"></span></div>
+                  <div class="flex justify-between items-center"><span>5. CERTIFICADO DE ESTUDIOS</span><span class="border-b border-black inline-block w-16"></span></div>
+                  <div class="flex justify-between items-center"><span>6. CERTIFICADO DE RESIDENCIA</span><span class="border-b border-black inline-block w-16"></span></div>
+                  <div class="flex justify-between items-center"><span>7. CERTIFICADO DE OS-10</span><span class="border-b border-black inline-block w-16"></span></div>
+                  <div class="flex justify-between items-center"><span>8. CURRICULUM</span><span class="border-b border-black inline-block w-16"></span></div>
+                  <div class="flex justify-between items-center"><span>9. OTROS</span><span class="border-b border-black inline-block w-16"></span></div>
+                </div>
+              </div>
+
+              <div class="mb-6">
+                <div class="font-bold text-sm mb-2">DETALLE DE LA ESTRUCTURA SALARIAL DE INGRESO</div>
+                <div class="border border-black">
+                  <div class="grid grid-cols-7 gap-0 bg-gray-100 border-b border-black text-xs">
+                    <div class="border-r border-black p-2 font-bold text-center">SUELDO<br/>BASE</div>
+                    <div class="border-r border-black p-2 font-bold text-center">GRATIFICACION</div>
+                    <div class="border-r border-black p-2 font-bold text-center">BONO</div>
+                    <div class="border-r border-black p-2 font-bold text-center">TURNO</div>
+                    <div class="border-r border-black p-2 font-bold text-center">ASISTENCIA</div>
+                    <div class="border-r border-black p-2 font-bold text-center">MOVILIZACION</div>
+                    <div class="p-2 font-bold text-center">COLACION</div>
+                  </div>
+                  <div class="grid grid-cols-7 gap-0 border-b border-black text-sm">
+                    <div class="border-r border-black p-2 text-center">$</div>
+                    <div class="border-r border-black p-2 text-center">$</div>
+                    <div class="border-r border-black p-2 text-center">$</div>
+                    <div class="border-r border-black p-2 text-center">$</div>
+                    <div class="border-r border-black p-2 text-center">$</div>
+                    <div class="border-r border-black p-2 text-center">$</div>
+                    <div class="p-2 text-center">$</div>
+                  </div>
+                  <div class="p-2 text-center font-bold text-sm">
+                    TOTAL LIQUIDO: $
+                    <span class="ml-2 border-b border-black inline-block w-32"></span>
+                  </div>
+                </div>
+                <div class="text-sm mt-2">
+                  <span class="font-bold">OTROS CONCEPTOS SALARIALES:</span>
+                  <span class="ml-2">$</span>
+                  <span class="ml-2 border-b border-black inline-block w-32"></span>
+                </div>
+              </div>
+
+              <div class="border-t border-black pt-4">
+                <div class="font-bold text-sm mb-2">CUADRO DE APROBACIÓN</div>
+                <div class="grid grid-cols-3 gap-4 text-sm">
+                  <div class="text-center">
+                    <div class="font-bold mb-2">SOLICITANTE</div>
+                    <div class="border-b border-black h-12"></div>
+                  </div>
+                  <div class="text-center">
+                    <div class="font-bold mb-2">V°B° OPERACIONES</div>
+                    <div class="border-b border-black h-12"></div>
+                  </div>
+                  <div class="text-center">
+                    <div class="font-bold mb-2">V°B° RRHH</div>
+                    <div class="border-b border-black h-12"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
-</main>
 
-<!-- Modal Ficha -->
-<div id="modalFicha" class="modal-overlay hidden">
-  <div class="bg-white p-6 rounded-lg shadow-lg max-w-2xl w-full modal-content">
-    <h2 class="text-xl font-bold mb-4">📄 Ficha de Postulación</h2>
-    <div id="fichaContent" class="space-y-2"></div>
-    <div class="flex justify-end mt-4 gap-2">
-      <button onclick="downloadFichaPDF()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded">📄 Imprimir Ficha</button>
-      <button onclick="closeFicha()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded">Cerrar</button>
-    </div>
-  </div>
-</div>
+  <script>
+    const SHEETDB_API_URL = "https://sheetdb.io/api/v1/arqvckj0fb8af";
+    const DECISIONS_API_URL = "https://sheetdb.io/api/v1/arqvckj0fb8af"; // Para guardar decisiones
+    let gestiones = [];
+    let currentCandidates = []; // Variable para guardar los candidatos de la búsqueda actual
 
-<script>
-const SHEETDB_API_URL = "https://sheetdb.io/api/v1/arqvckj0fb8af";
-let gestiones = [], currentCandidates = [];
+    // 🔧 Panel de Debug
+    function toggleDebugPanel() {
+      const content = document.getElementById("debugContent");
+      const arrow = document.getElementById("debugArrow");
+      
+      if (content.classList.contains("hidden")) {
+        content.classList.remove("hidden");
+        arrow.style.transform = "rotate(180deg)";
+      } else {
+        content.classList.add("hidden");
+        arrow.style.transform = "rotate(0deg)";
+      }
+    }
 
-async function searchCandidates(q){try{const r=await fetch(SHEETDB_API_URL);const all=await r.json();const s=q.trim().toLowerCase();const f=all.filter(c=>[c.NOMBRE,c.APELLIDO,c.RUT,c.CARGO,c.EMAIL,c.TELEFONO,c["FECHA DE POSTULACION"],c.COMUNA,c.EMPRESA].some(v=>v&&v.toLowerCase().includes(s)));currentCandidates=f;renderResults(f);}catch(e){alert("Error búsqueda: "+e.message);}}
+    function updateDebugInfo(message) {
+      const debugDiv = document.getElementById("debugInfo");
+      debugDiv.innerHTML += `<div class="mb-1">${new Date().toLocaleTimeString()}: ${message}</div>`;
+      debugDiv.scrollTop = debugDiv.scrollHeight;
+    }
 
-async function smartSearch(){const q=document.getElementById("searchInput").value;if(q.length<2){alert("Escribe al menos 2 caracteres");return;}try{const r=await fetch(SHEETDB_API_URL);const all=await r.json();const s=q.trim().toLowerCase();let scored=all.map(c=>{let score=0;[c.NOMBRE,c.APELLIDO,c.RUT,c.CARGO,c.EMAIL,c.TELEFONO,c["FECHA DE POSTULACION"],c.COMUNA,c.EMPRESA].forEach(v=>{if(v&&v.toLowerCase().includes(s))score+=1;});return {...c,score};});scored=scored.filter(c=>c.score>0).sort((a,b)=>b.score-a.score);currentCandidates=scored;renderResults(scored,true);}catch(e){alert("Error IA: "+e.message);}}
+    function clearDebugInfo() {
+      document.getElementById("debugInfo").innerHTML = "";
+    }
 
-function renderResults(data,isIA=false){const d=document.getElementById("results");d.innerHTML="";if(!data.length){d.innerHTML="<p>No hay resultados</p>";return;}data.forEach(c=>{const card=document.createElement("div");card.className="p-4 rounded-lg shadow-sm text-white cursor-pointer";card.style.background="#77c25c";card.innerHTML=`<p><b>${c.NOMBRE||''} ${c.APELLIDO||''}</b> - ${c.CARGO||''}</p><p>${c.RUT||''} | ${c.EMAIL||''}</p>${isIA?`<p><b>Score IA:</b> ${c.score}</p>`:''}`;card.onclick=()=>openFicha(c);d.appendChild(card);addHistorial(c,isIA?c.score:"");});document.getElementById("historialSection").classList.remove("hidden");}
+    // 🔧 Función para probar la API
+    async function testAPI() {
+      updateDebugInfo("🔄 Iniciando prueba de API...");
+      
+      try {
+        const response = await fetch(SHEETDB_API_URL);
+        updateDebugInfo(`📡 Respuesta HTTP: ${response.status} ${response.statusText}`);
+        
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
 
-function addHistorial(c,scoreIA){const body=document.getElementById("historialBody");const row=document.createElement("tr");row.innerHTML=`<td class='p-2'>${c.NOMBRE||''} ${c.APELLIDO||''}</td><td class='p-2'>${c.RUT||''}</td><td class='p-2'>${c.CARGO||''}</td><td class='p-2'>-</td><td class='p-2'>-</td><td class='p-2'>${new Date().toLocaleString()}</td><td class='p-2'>${scoreIA}</td>`;body.appendChild(row);gestiones.push({Nombre:c.NOMBRE||'',RUT:c.RUT||'',Cargo:c.CARGO||'',Estado:'-',Motivo:'-',FechaHora:new Date().toLocaleString(),ScoreIA:scoreIA});}
+        const data = await response.json();
+        updateDebugInfo(`✅ Datos recibidos: ${data.length} registros`);
+        
+        if (data.length > 0) {
+          updateDebugInfo(`📋 Primer registro: ${JSON.stringify(data[0])}`);
+          updateDebugInfo(`🔑 Campos disponibles: ${Object.keys(data[0]).join(', ')}`);
+        }
+        currentCandidates = data; // Guardar datos para uso futuro
+        return data;
+      } catch (error) {
+        updateDebugInfo(`❌ Error: ${error.message}`);
+        throw error;
+      }
+    }
 
-// Modal Ficha
-function openFicha(c){document.getElementById("modalFicha").classList.remove("hidden");document.getElementById("fichaContent").innerHTML=`<p><b>Nombre:</b> ${c.NOMBRE||''} ${c.APELLIDO||''}</p><p><b>RUT:</b> ${c.RUT||''}</p><p><b>Cargo:</b> ${c.CARGO||''}</p><p><b>Email:</b> ${c.EMAIL||''}</p><p><b>Teléfono:</b> ${c.TELEFONO||''}</p><p><b>Comuna:</b> ${c.COMUNA||''}</p><p><b>Empresa:</b> ${c.EMPRESA||''}</p><p><b>Fecha de Postulación:</b> ${c["FECHA DE POSTULACION"]||''}</p>`;}
-function closeFicha(){document.getElementById("modalFicha").classList.add("hidden");}
-async function downloadFichaPDF(){const { jsPDF } = window.jspdf;const doc=new jsPDF();await html2canvas(document.getElementById("fichaContent")).then(c=>{const img=c.toDataURL("image/png");doc.addImage(img,"PNG",10,10,180,0);doc.save("ficha_postulacion.pdf");});}
+    // 🔎 Búsqueda mejorada con debug
+    async function searchCandidates(query) {
+      updateDebugInfo(`🔍 Buscando: "${query}"`);
+      
+      try {
+        const response = await fetch(SHEETDB_API_URL);
+        if (!response.ok) {
+          throw new Error(`Error ${response.status}: ${response.statusText}`);
+        }
 
-// Excel y PDF historial
-function downloadExcel(){if(!gestiones.length){alert("No hay datos");return;}const ws=XLSX.utils.json_to_sheet(gestiones);const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Historial");XLSX.writeFile(wb,"historial.xlsx");}
-async function downloadPDF(){if(!gestiones.length){alert("No hay datos");return;}const { jsPDF } = window.jspdf;const doc=new jsPDF();await html2canvas(document.getElementById("historialSection")).then(c=>{const img=c.toDataURL("image/png");doc.addImage(img,"PNG",10,10,190,0);doc.save("historial.pdf");});}
+        const allData = await response.json();
+        updateDebugInfo(`📊 Total de registros en la base: ${allData.length}`);
 
-document.getElementById("searchBtn").addEventListener("click",()=>{const q=document.getElementById("searchInput").value;if(q.length>=2)searchCandidates(q);});
-document.getElementById("searchInput").addEventListener("keydown",e=>{if(e.key==="Enter")document.getElementById("searchBtn").click();});
-document.getElementById("smartSearchBtn").addEventListener("click",smartSearch);
-document.getElementById("downloadExcelBtn").addEventListener("click",downloadExcel);
-document.getElementById("downloadPdfBtn").addEventListener("click",downloadPDF);
-</script>
+        const sanitizedQuery = query.trim().toLowerCase();
+        updateDebugInfo(`🔤 Query procesada: "${sanitizedQuery}"`);
 
+        const filtered = allData.filter(candidato => {
+          const matches = [
+            candidato.NOMBRE && candidato.NOMBRE.toLowerCase().includes(sanitizedQuery),
+            candidato.APELLIDO && candidato.APELLIDO.toLowerCase().includes(sanitizedQuery),
+            candidato.RUT && candidato.RUT.toLowerCase().includes(sanitizedQuery),
+            candidato.CARGO && candidato.CARGO.toLowerCase().includes(sanitizedQuery),
+            candidato.EMAIL && candidato.EMAIL.toLowerCase().includes(sanitizedQuery),
+            candidato.TELEFONO && candidato.TELEFONO.toLowerCase().includes(sanitizedQuery),
+            candidato["FECHA DE POSTULACION"] && candidato["FECHA DE POSTULACION"].toLowerCase().includes(sanitizedQuery),
+            candidato.COMUNA && candidato.COMUNA.toLowerCase().includes(sanitizedQuery),
+            candidato.EMPRESA && candidato.EMPRESA.toLowerCase().includes(sanitizedQuery)
+          ];
+          
+          return matches.some(match => match === true);
+        });
+        
+        currentCandidates = filtered; // Actualizar la lista de candidatos actual
+        updateDebugInfo(`✅ Resultados filtrados: ${filtered.length} coincidencias`);
+        return { success: true, data: filtered };
+      } catch (error) {
+        updateDebugInfo(`❌ Error en búsqueda: ${error.message}`);
+        return { success: false, error: error.message };
+      }
+    }
+
+    // 💾 Guardar decisión de reclutamiento
+    async function saveDecision(candidato, reclutado, motivo = "") {
+      updateDebugInfo(`💾 Guardando decisión para ${candidato.NOMBRE} ${candidato.APELLIDO}`);
+      
+      const record = {
+        nombre: `${candidato.NOMBRE || ""} ${candidato.APELLIDO || ""}`.trim(),
+        rut: candidato.RUT || "N/A",
+        cargo: candidato.CARGO || "N/A",
+        email: candidato.EMAIL || "N/A",
+        telefono: candidato.TELEFONO || "N/A",
+        comuna: candidato.COMUNA || "N/A",
+        empresa: candidato.EMPRESA || "N/A",
+        fechaPostulacion: candidato["FECHA DE POSTULACION"] || "N/A",
+        reclutado: reclutado ? "SÍ" : "NO",
+        motivo: motivo || (reclutado ? "Aprobado en proceso" : "No cumple requisitos"),
+        fechaRegistro: new Date().toLocaleDateString("es-CL"),
+        horaRegistro: new Date().toLocaleTimeString("es-CL", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+
+      try {
+        gestiones.unshift(record);
+        updateDebugInfo(`✅ Decisión guardada: ${reclutado ? "RECLUTADO" : "RECHAZADO"}`);
+        return { success: true };
+      } catch (error) {
+        updateDebugInfo(`❌ Error al guardar decisión: ${error.message}`);
+        return { success: false, error: error.message };
+      }
+    }
+
+    // 🎨 Renderizar resultados con botones de decisión
+    function renderResults(data) {
+      const resultsDiv = document.getElementById("results");
+      resultsDiv.innerHTML = "";
+
+      if (data.length === 0) {
+        resultsDiv.innerHTML = `<p class="text-gray-500">No se encontraron resultados.</p>`;
+        return;
+      }
+
+      data.forEach(candidato => {
+        const card = document.createElement("div");
+        card.className = "p-4 rounded-lg shadow-sm text-white flex justify-between items-center";
+        card.style.backgroundColor = "#77c25c";
+
+        card.innerHTML = `
+          <div class="flex-grow">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <p><strong>Nombre:</strong> ${candidato.NOMBRE || "-"} ${candidato.APELLIDO || ""}</p>
+                <p><strong>RUT:</strong> ${candidato.RUT || "-"}</p>
+                <p><strong>Cargo:</strong> ${candidato.CARGO || "-"}</p>
+                <p><strong>Email:</strong> ${candidato.EMAIL || "-"}</p>
+              </div>
+              <div>
+                <p><strong>Teléfono:</strong> ${candidato.TELEFONO || "-"}</p>
+                <p><strong>Comuna:</strong> ${candidato.COMUNA || "-"}</p>
+                <p><strong>Empresa:</strong> ${candidato.EMPRESA || "-"}</p>
+                <p><strong>Fecha Postulación:</strong> ${candidato["FECHA DE POSTULACION"] || "-"}</p>
+              </div>
+            </div>
+            ${candidato["ENLACE CV"] ? `<p class="mt-2"><strong>CV:</strong> <a href="${candidato["ENLACE CV"]}" target="_blank" class="underline">📄 Ver Curriculum</a></p>` : ""}
+          </div>
+          <div class="flex flex-col gap-2 ml-4">
+            ${candidato["ENLACE CV"] ? `
+            <button 
+              onclick="downloadCV('${candidato["ENLACE CV"]}', '${candidato.NOMBRE} ${candidato.APELLIDO}')" 
+              class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm"
+            >
+              📥 Descargar CV
+            </button>` : ""}
+            <button 
+              onclick="generateCartilla('${candidato.RUT}')" 
+              class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded text-sm"
+            >
+              📋 Cartilla PDF
+            </button>
+            <button 
+              onclick="showApplicationForm('${candidato.RUT}')" 
+              class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded text-sm"
+            >
+              📝 Ver Ficha
+            </button>
+            <button 
+              onclick="handleDecision('${candidato.RUT}', true)" 
+              class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
+            >
+              ✅ Reclutar
+            </button>
+            <button 
+              onclick="handleDecision('${candidato.RUT}', false)" 
+              class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm"
+            >
+              ❌ Rechazar
+            </button>
+          </div>
+        `;
+        resultsDiv.appendChild(card);
+      });
+    }
+
+    // 📊 Renderizar historial
+    function renderHistorial() {
+      const historialBody = document.getElementById("historialBody");
+      const historialSection = document.getElementById("historialSection");
+      
+      if (gestiones.length === 0) {
+        historialSection.classList.add("hidden");
+        return;
+      }
+
+      historialSection.classList.remove("hidden");
+      historialBody.innerHTML = "";
+
+      gestiones.forEach(gestion => {
+        const row = document.createElement("tr");
+        row.className = "border-b border-gray-200 hover:bg-gray-50";
+        
+        row.innerHTML = `
+          <td class="p-3">${gestion.nombre}</td>
+          <td class="p-3">${gestion.rut}</td>
+          <td class="p-3">${gestion.cargo}</td>
+          <td class="p-3">
+            <span class="px-2 py-1 rounded text-xs ${gestion.reclutado === 'SÍ' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}">
+              ${gestion.reclutado === 'SÍ' ? '✅ Reclutado' : '❌ Rechazado'}
+            </span>
+          </td>
+          <td class="p-3">${gestion.motivo}</td>
+          <td class="p-3">${gestion.fechaRegistro} ${gestion.horaRegistro}</td>
+        `;
+        
+        historialBody.appendChild(row);
+      });
+    }
+
+    // 📥 Descargar CV desde enlace
+    window.downloadCV = function(enlaceCV, nombreCandidato) {
+      if (!enlaceCV) {
+        alert("❌ No hay enlace de CV disponible");
+        return;
+      }
+      
+      updateDebugInfo(`📥 Iniciando descarga de CV para ${nombreCandidato}`);
+      
+      try {
+        const link = document.createElement('a');
+        link.href = enlaceCV;
+        link.download = `CV_${nombreCandidato.replace(/\s+/g, '_')}.pdf`;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        updateDebugInfo(`✅ Descarga iniciada para CV de ${nombreCandidato}`);
+      } catch (error) {
+        updateDebugInfo(`❌ Error al descargar CV: ${error.message}`);
+        alert("❌ Error al descargar el CV");
+      }
+    };
+    
+    // 📋 Generar cartilla PDF del candidato
+    window.generateCartilla = async function(rutCandidato) {
+      updateDebugInfo(`📋 Generando cartilla para RUT: ${rutCandidato}`);
+      
+      try {
+        const candidato = currentCandidates.find(c => c.RUT === rutCandidato);
+        if (!candidato) {
+          alert("❌ No se encontraron datos del candidato para generar la cartilla.");
+          updateDebugInfo(`❌ Candidato con RUT ${rutCandidato} no encontrado en la lista actual.`);
+          return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        doc.setFillColor(0, 35, 56);
+        doc.rect(0, 0, 210, 30, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(20);
+        doc.text('GRUPO NORTE', 20, 20);
+        doc.setFontSize(12);
+        doc.text('Sistema de Reclutamiento', 150, 20);
+        
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(16);
+        doc.text('CARTILLA DE CANDIDATO', 20, 50);
+        
+        let yPos = 70;
+        const lineHeight = 8;
+        
+        const campos = [
+          ['Nombre Completo', `${candidato.NOMBRE || ''} ${candidato.APELLIDO || ''}`],
+          ['RUT', candidato.RUT || 'N/A'],
+          ['Cargo Postulado', candidato.CARGO || 'N/A'],
+          ['Email', candidato.EMAIL || 'N/A'],
+          ['Teléfono', candidato.TELEFONO || 'N/A'],
+          ['Comuna', candidato.COMUNA || 'N/A'],
+          ['Empresa Anterior', candidato.EMPRESA || 'N/A'],
+          ['Fecha de Postulación', candidato["FECHA DE POSTULACION"] || 'N/A'],
+          ['Cumple con Perfil', candidato["CUMPLE CON EL PERFIL"] || 'N/A'],
+          ['Antecedentes', candidato.ANTECEDENTES || 'N/A'],
+          ['Observaciones', candidato.OBSERVACIONES || 'N/A']
+        ];
+        
+        doc.setFontSize(12);
+        campos.forEach(([campo, valor]) => {
+          doc.setFont(undefined, 'bold');
+          doc.text(`${campo}:`, 20, yPos);
+          doc.setFont(undefined, 'normal');
+          
+          const maxWidth = 160;
+          const splitText = doc.splitTextToSize(String(valor || ''), maxWidth);
+          doc.text(splitText, 70, yPos);
+          
+          yPos += lineHeight * splitText.length;
+          
+          if (yPos > 270) {
+            doc.addPage();
+            yPos = 20;
+          }
+        });
+        
+        const fechaGeneracion = new Date().toLocaleDateString('es-CL');
+        const horaGeneracion = new Date().toLocaleTimeString('es-CL');
+        
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Cartilla generada el ${fechaGeneracion} a las ${horaGeneracion}`, 20, yPos + 20);
+        
+        const nombreArchivo = `Cartilla_${candidato.NOMBRE}_${candidato.APELLIDO}_${candidato.RUT}.pdf`.replace(/\s+/g, '_');
+        doc.save(nombreArchivo);
+        updateDebugInfo(`✅ Cartilla PDF generada: ${nombreArchivo}`);
+        
+      } catch (error) {
+        updateDebugInfo(`❌ Error al generar cartilla: ${error.message}`);
+        alert("❌ Error al generar la cartilla PDF");
+      }
+    };
+    
+    // 📝 Funciones para la Ficha de Postulación
+    window.showApplicationForm = function(rutCandidato) {
+      updateDebugInfo(`📝 Mostrando ficha para RUT: ${rutCandidato}`);
+      const candidato = currentCandidates.find(c => c.RUT === rutCandidato);
+      
+      if (!candidato) {
+        alert("❌ No se encontraron datos del candidato para mostrar la ficha.");
+        updateDebugInfo(`❌ Candidato con RUT ${rutCandidato} no encontrado en la lista actual.`);
+        return;
+      }
+      
+      // Llenar el formulario con los datos
+      document.getElementById('form-fecha-postulacion').textContent = candidato["FECHA DE POSTULACION"] || '';
+      document.getElementById('form-cargo').textContent = candidato.CARGO || '';
+      document.getElementById('form-nombre').textContent = `${candidato.NOMBRE || ''} ${candidato.APELLIDO || ''}`.trim();
+      document.getElementById('form-rut').textContent = candidato.RUT || '';
+      document.getElementById('form-estado-civil').textContent = candidato["ESTADO CIVIL"] || '';
+      document.getElementById('form-fecha-nacimiento').textContent = candidato["FECHA DE NACIMIENTO"] || '';
+      document.getElementById('form-edad').textContent = candidato.EDAD || '';
+      document.getElementById('form-nacionalidad').textContent = candidato.NACIONALIDAD || '';
+      document.getElementById('form-visa').textContent = candidato.VISA || '';
+      document.getElementById('form-cargas').textContent = candidato["CARGAS FAMILIARES"] || '';
+      document.getElementById('form-direccion').textContent = candidato.DIRECCION || '';
+      document.getElementById('form-poblacion').textContent = candidato.POBLACION || '';
+      document.getElementById('form-comuna').textContent = candidato.COMUNA || '';
+      document.getElementById('form-ciudad').textContent = candidato.CIUDAD || '';
+      document.getElementById('form-telefono').textContent = candidato.TELEFONO || '';
+      document.getElementById('form-email').textContent = candidato.EMAIL || '';
+
+      const modal = document.getElementById('formularioModal');
+      // Guardar el RUT del candidato actual en el modal para usarlo al descargar
+      modal.setAttribute('data-current-rut', rutCandidato);
+      modal.classList.remove('hidden');
+    };
+
+    window.hideApplicationForm = function() {
+      document.getElementById('formularioModal').classList.add('hidden');
+    };
+
+    // =========================================================================
+    // ===== NUEVA FUNCIÓN PARA DESCARGAR LA FICHA COMPLETA COMO PDF =====
+    // =========================================================================
+    window.downloadFichaPDF = async function() {
+      const downloadBtn = document.getElementById('downloadFichaBtn');
+      downloadBtn.disabled = true;
+      downloadBtn.textContent = 'Generando...';
+
+      const modal = document.getElementById('formularioModal');
+      const rutCandidato = modal.getAttribute('data-current-rut');
+      const candidato = currentCandidates.find(c => c.RUT === rutCandidato);
+
+      if (!candidato) {
+        alert('❌ Error: No se pudo encontrar al candidato para generar el PDF.');
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = '📄 Descargar Ficha';
+        return;
+      }
+      
+      const formElement = document.getElementById('formularioPostulacion');
+      
+      try {
+        const canvas = await html2canvas(formElement, {
+          scale: 2, // Mejora la resolución de la imagen
+          useCORS: true,
+          logging: false
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+
+        // Crear PDF en orientación vertical (portrait), usando pixeles como unidad, en formato A4
+        const pdf = new jsPDF('p', 'px', 'a4');
+        
+        const imgProps = pdf.getImageProperties(imgData);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+        let heightLeft = pdfHeight;
+        let position = 0;
+
+        // Añadir la primera página
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pdf.internal.pageSize.getHeight();
+
+        // Si la ficha es muy larga, añadir páginas adicionales
+        while (heightLeft >= 0) {
+          position = heightLeft - pdfHeight;
+          pdf.addPage();
+          pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+          heightLeft -= pdf.internal.pageSize.getHeight();
+        }
+
+        const nombreCandidato = `${candidato.NOMBRE || ''}_${candidato.APELLIDO || ''}`.replace(/\s+/g, '_');
+        const nombreArchivo = `Ficha_${nombreCandidato}_${candidato.RUT}.pdf`;
+        pdf.save(nombreArchivo);
+        updateDebugInfo(`✅ Ficha PDF generada: ${nombreArchivo}`);
+        
+      } catch (error) {
+        updateDebugInfo(`❌ Error al generar ficha PDF: ${error.message}`);
+        alert(`❌ Ocurrió un error al generar el PDF de la ficha.`);
+      } finally {
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = '📄 Descargar Ficha';
+      }
+    };
+
+    // 📊 Descargar historial en Excel
+    function downloadExcel() {
+      if (gestiones.length === 0) {
+        alert("❌ No hay gestiones para descargar");
+        return;
+      }
+      
+      updateDebugInfo(`📊 Generando archivo Excel con ${gestiones.length} gestiones`);
+      
+      try {
+        const excelData = gestiones.map(gestion => ({
+          'Nombre': gestion.nombre, 'RUT': gestion.rut, 'Cargo': gestion.cargo,
+          'Email': gestion.email, 'Teléfono': gestion.telefono, 'Comuna': gestion.comuna,
+          'Empresa': gestion.empresa, 'Fecha Postulación': gestion.fechaPostulacion,
+          'Estado': gestion.reclutado, 'Motivo': gestion.motivo,
+          'Fecha Registro': gestion.fechaRegistro, 'Hora Registro': gestion.horaRegistro
+        }));
+        
+        const ws = XLSX.utils.json_to_sheet(excelData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Gestiones de Reclutamiento");
+        
+        ws['!cols'] = [
+          { wch: 25 }, { wch: 12 }, { wch: 20 }, { wch: 25 }, { wch: 12 },
+          { wch: 15 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 30 },
+          { wch: 12 }, { wch: 10 }
+        ];
+        
+        const fecha = new Date().toISOString().split('T')[0];
+        const nombreArchivo = `Historial_Reclutamiento_${fecha}.xlsx`;
+        
+        XLSX.writeFile(wb, nombreArchivo);
+        updateDebugInfo(`✅ Archivo Excel descargado: ${nombreArchivo}`);
+      } catch (error) {
+        updateDebugInfo(`❌ Error al generar Excel: ${error.message}`);
+        alert("❌ Error al generar el archivo Excel");
+      }
+    }
+
+    // 📄 Descargar historial en PDF
+    function downloadPDF() {
+      if (gestiones.length === 0) {
+        alert("❌ No hay gestiones para descargar");
+        return;
+      }
+      
+      updateDebugInfo(`📄 Generando PDF con ${gestiones.length} gestiones`);
+      
+      try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        doc.setFillColor(0, 35, 56);
+        doc.rect(0, 0, 210, 25, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(16);
+        doc.text('GRUPO NORTE - HISTORIAL DE RECLUTAMIENTO', 20, 17);
+        
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(10);
+        const fechaHoy = new Date().toLocaleDateString('es-CL');
+        doc.text(`Generado el: ${fechaHoy}`, 20, 35);
+        doc.text(`Total de gestiones: ${gestiones.length}`, 20, 42);
+        
+        let yPos = 55;
+        const pageHeight = 280;
+        
+        gestiones.forEach((gestion, index) => {
+          if (yPos > pageHeight - 40) {
+            doc.addPage();
+            yPos = 20;
+          }
+          
+          doc.setDrawColor(200, 200, 200);
+          doc.line(20, yPos, 190, yPos);
+          yPos += 5;
+          
+          doc.setFontSize(12);
+          doc.setFont(undefined, 'bold');
+          doc.text(`${index + 1}. ${gestion.nombre}`, 20, yPos);
+          yPos += 7;
+          
+          doc.setFontSize(10);
+          doc.setFont(undefined, 'normal');
+          
+          const info = [
+            `RUT: ${gestion.rut}`, `Cargo: ${gestion.cargo}`, `Email: ${gestion.email}`,
+            `Estado: ${gestion.reclutado}`, `Motivo: ${gestion.motivo}`,
+            `Fecha: ${gestion.fechaRegistro} ${gestion.horaRegistro}`
+          ];
+          
+          info.forEach(texto => {
+            doc.text(texto, 25, yPos);
+            yPos += 5;
+          });
+          
+          yPos += 3;
+        });
+        
+        const nombreArchivo = `Historial_Reclutamiento_${fechaHoy.replace(/\//g, '-')}.pdf`;
+        doc.save(nombreArchivo);
+        updateDebugInfo(`✅ PDF descargado: ${nombreArchivo}`);
+      } catch (error) {
+        updateDebugInfo(`❌ Error al generar PDF: ${error.message}`);
+        alert("❌ Error al generar el archivo PDF");
+      }
+    }
+    
+    // ✋ Manejar decisión de reclutamiento
+    window.handleDecision = async function(rutCandidato, reclutado) {
+      const motivo = prompt(
+        reclutado ? "Ingresa el motivo de la aprobación (opcional):" : "Ingresa el motivo del rechazo (opcional):"
+      );
+      
+      if (motivo === null) return;
+
+      const candidato = currentCandidates.find(c => c.RUT === rutCandidato);
+      
+      if (candidato) {
+        const result = await saveDecision(candidato, reclutado, motivo);
+        if (result.success) {
+          currentCandidates = currentCandidates.filter(c => c.RUT !== rutCandidato);
+          renderResults(currentCandidates);
+          renderHistorial();
+          const mensaje = reclutado ? "Candidato reclutado exitosamente" : "Candidato rechazado";
+          alert(`✅ ${mensaje}`);
+        } else {
+          alert(`❌ Error al procesar decisión: ${result.error}`);
+        }
+      } else {
+        alert("❌ No se encontró al candidato en la lista actual.");
+      }
+    };
+
+    // Event Listeners
+    document.getElementById("testApiBtn").addEventListener("click", async () => {
+      clearDebugInfo();
+      try {
+        const data = await testAPI();
+        renderResults(data.slice(0, 5));
+      } catch (error) {
+        document.getElementById("results").innerHTML = `<p class="text-red-500">❌ Error: ${error.message}</p>`;
+      }
+    });
+
+    document.getElementById("clearDebugBtn").addEventListener("click", clearDebugInfo);
+    document.getElementById("downloadExcelBtn").addEventListener("click", downloadExcel);
+    document.getElementById("downloadPdfBtn").addEventListener("click", downloadPDF);
+
+    document.getElementById("searchBtn").addEventListener("click", async () => {
+      const query = document.getElementById("searchInput").value;
+      if (query.length < 2) {
+        document.getElementById("results").innerHTML = `<p class="text-gray-400">Escribe al menos 2 caracteres...</p>`;
+        return;
+      }
+      const result = await searchCandidates(query);
+      if (result.success) {
+        renderResults(result.data);
+      } else {
+        document.getElementById("results").innerHTML = `<p class="text-red-500">❌ Error: ${result.error}</p>`;
+      }
+    });
+
+    document.getElementById("searchInput").addEventListener("input", async (e) => {
+      const query = e.target.value;
+      if (query.length < 2) {
+        document.getElementById("results").innerHTML = `<p class="text-gray-400">Escribe al menos 2 caracteres...</p>`;
+        return;
+      }
+      const result = await searchCandidates(query);
+      if (result.success) {
+        renderResults(result.data);
+      } else {
+        document.getElementById("results").innerHTML = `<p class="text-red-500">❌ Error: ${result.error}</p>`;
+      }
+    });
+
+    document.getElementById("searchInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        document.getElementById("searchBtn").click();
+      }
+    });
+
+    window.addEventListener('load', () => {
+      updateDebugInfo("🚀 Sistema de Reclutamiento iniciado");
+      renderHistorial();
+    });
+  </script>
 </body>
 </html>
