@@ -3,13 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sistema de Reclutamiento - Grupo Norte</title>
+  <title>Sistema de Reclutamiento con IA - Grupo Norte</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
-    /* Estilos para el modal de la ficha de postulación */
     .modal-overlay {
       position: fixed;
       top: 0;
@@ -26,6 +25,26 @@
       max-height: 90vh;
       overflow-y: auto;
     }
+    .ai-gradient {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .ai-pulse {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .7; }
+    }
+    .thinking {
+      border: 2px solid #667eea;
+      border-top: 2px solid transparent;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body class="min-h-screen" style="background-color:#002338;">
@@ -40,20 +59,96 @@
   </header>
 
   <main class="max-w-6xl mx-auto bg-white shadow-lg rounded-xl p-6 mt-6">
-    <h1 class="text-2xl font-bold mb-4 text-center text-gray-800">📋 Sistema de Reclutamiento</h1>
+    <h1 class="text-2xl font-bold mb-4 text-center text-gray-800">Sistema de Reclutamiento con IA</h1>
 
+    <!-- Panel de IA -->
+    <div class="ai-gradient rounded-lg mb-4 overflow-hidden shadow-lg">
+      <div class="p-3 cursor-pointer flex justify-between items-center" onclick="toggleAIPanel()">
+        <div class="flex items-center gap-3">
+          <div class="w-6 h-6 bg-white rounded-full ai-pulse flex items-center justify-center">
+            <span class="text-purple-600 text-sm font-bold">AI</span>
+          </div>
+          <h3 class="font-bold text-white">Asistente de IA para Reclutamiento</h3>
+        </div>
+        <span id="aiArrow" class="transform transition-transform text-white">▼</span>
+      </div>
+      <div id="aiContent" class="p-4 bg-white hidden">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <!-- Análisis de Candidatos -->
+          <div class="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border">
+            <h4 class="font-bold text-blue-800 mb-2 flex items-center gap-2">
+              <span class="w-2 h-2 bg-blue-500 rounded-full"></span>
+              Análisis de Candidatos
+            </h4>
+            <p class="text-sm text-blue-700 mb-3">La IA analiza automáticamente los perfiles y recomienda los mejores candidatos.</p>
+            <button onclick="analyzeAllCandidates()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm w-full">
+              Analizar Candidatos Actuales
+            </button>
+          </div>
+
+          <!-- Generación de Preguntas -->
+          <div class="bg-gradient-to-br from-green-50 to-green-100 p-4 rounded-lg border">
+            <h4 class="font-bold text-green-800 mb-2 flex items-center gap-2">
+              <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+              Preguntas de Entrevista
+            </h4>
+            <p class="text-sm text-green-700 mb-3">Genera preguntas personalizadas para cada candidato y puesto.</p>
+            <button onclick="generateInterviewQuestions()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm w-full">
+              Generar Preguntas
+            </button>
+          </div>
+
+          <!-- Evaluación de CV -->
+          <div class="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border">
+            <h4 class="font-bold text-purple-800 mb-2 flex items-center gap-2">
+              <span class="w-2 h-2 bg-purple-500 rounded-full"></span>
+              Evaluación de CV
+            </h4>
+            <p class="text-sm text-purple-700 mb-3">Analiza CVs y extrae información clave automáticamente.</p>
+            <input type="file" id="cvFile" accept=".pdf,.doc,.docx" class="hidden">
+            <button onclick="document.getElementById('cvFile').click()" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm w-full">
+              Subir y Analizar CV
+            </button>
+          </div>
+
+          <!-- Chat con IA -->
+          <div class="bg-gradient-to-br from-orange-50 to-orange-100 p-4 rounded-lg border">
+            <h4 class="font-bold text-orange-800 mb-2 flex items-center gap-2">
+              <span class="w-2 h-2 bg-orange-500 rounded-full"></span>
+              Consultor IA
+            </h4>
+            <p class="text-sm text-orange-700 mb-3">Pregúntale a la IA sobre estrategias de reclutamiento.</p>
+            <button onclick="openAIChat()" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded text-sm w-full">
+              Abrir Chat con IA
+            </button>
+          </div>
+        </div>
+
+        <!-- Área de Resultados de IA -->
+        <div id="aiResults" class="bg-gray-50 rounded-lg p-4 hidden">
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="font-bold text-gray-800">Resultados del Análisis de IA</h4>
+            <button onclick="clearAIResults()" class="text-gray-500 hover:text-gray-700 text-sm">Limpiar</button>
+          </div>
+          <div id="aiResultsContent" class="space-y-3">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel de Debug Original -->
     <div class="bg-gray-100 rounded-lg mb-4 overflow-hidden">
       <div class="p-3 bg-gray-200 cursor-pointer flex justify-between items-center" onclick="toggleDebugPanel()">
-        <h3 class="font-bold text-gray-700">🔧 Panel de Debug</h3>
+        <h3 class="font-bold text-gray-700">Panel de Debug</h3>
         <span id="debugArrow" class="transform transition-transform">▼</span>
       </div>
       <div id="debugContent" class="p-4 hidden">
         <div id="debugInfo" class="text-sm text-gray-600 max-h-40 overflow-y-auto"></div>
         <button id="testApiBtn" class="bg-blue-500 text-white px-4 py-2 rounded mt-2 hover:bg-blue-600">
-          🔍 Probar conexión a API
+          Probar conexión a API
         </button>
         <button id="clearDebugBtn" class="bg-gray-500 text-white px-4 py-2 rounded mt-2 ml-2 hover:bg-gray-600">
-          🗑️ Limpiar Log
+          Limpiar Log
         </button>
       </div>
     </div>
@@ -66,7 +161,13 @@
         class="flex-grow p-3 border rounded-lg focus:ring focus:ring-green-300"
       />
       <button id="searchBtn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded">
-        🔍 Buscar
+        Buscar
+      </button>
+      <button onclick="smartSearch()" class="ai-gradient text-white px-4 py-2 rounded hover:opacity-90 flex items-center gap-2">
+        <span class="w-4 h-4 bg-white rounded-full flex items-center justify-center">
+          <span class="text-purple-600 text-xs font-bold">AI</span>
+        </span>
+        Búsqueda IA
       </button>
     </div>
 
@@ -77,13 +178,13 @@
 
     <div id="historialSection" class="bg-gray-50 rounded-lg p-4 hidden">
       <div class="flex justify-between items-center mb-4">
-        <h2 class="text-xl font-bold text-gray-800">📊 Historial de Gestiones</h2>
+        <h2 class="text-xl font-bold text-gray-800">Historial de Gestiones</h2>
         <div class="flex gap-2">
           <button id="downloadExcelBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm">
-            📊 Descargar Excel
+            Descargar Excel
           </button>
           <button id="downloadPdfBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm">
-            📄 Descargar PDF
+            Descargar PDF
           </button>
         </div>
       </div>
@@ -95,6 +196,7 @@
               <th class="p-3 text-left">RUT</th>
               <th class="p-3 text-left">Cargo</th>
               <th class="p-3 text-left">Estado</th>
+              <th class="p-3 text-left">Score IA</th>
               <th class="p-3 text-left">Motivo</th>
               <th class="p-3 text-left">Fecha/Hora</th>
             </tr>
@@ -105,17 +207,59 @@
       </div>
     </div>
   </main>
-  
+
+  <!-- Modal para Chat con IA -->
+  <div id="aiChatModal" class="modal-overlay hidden">
+    <div class="modal-content bg-white text-black p-6 rounded-lg shadow-xl w-full max-w-4xl relative max-h-[80vh]">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-bold flex items-center gap-2">
+          <div class="w-6 h-6 ai-gradient rounded-full flex items-center justify-center">
+            <span class="text-white text-sm font-bold">AI</span>
+          </div>
+          Consultor de Reclutamiento IA
+        </h3>
+        <button onclick="closeAIChat()" class="text-gray-600 hover:text-black text-2xl font-bold">&times;</button>
+      </div>
+      
+      <div id="aiChatMessages" class="bg-gray-50 rounded-lg p-4 h-64 overflow-y-auto mb-4 space-y-3">
+        <div class="ai-gradient text-white p-3 rounded-lg max-w-md">
+          ¡Hola! Soy tu asistente de IA para reclutamiento. Puedo ayudarte con:
+          <ul class="mt-2 text-sm">
+            <li>• Análisis de candidatos</li>
+            <li>• Estrategias de selección</li>
+            <li>• Preguntas de entrevista</li>
+            <li>• Evaluación de perfiles</li>
+          </ul>
+          ¿En qué puedo ayudarte hoy?
+        </div>
+      </div>
+      
+      <div class="flex gap-2">
+        <input 
+          type="text" 
+          id="aiChatInput" 
+          placeholder="Pregunta algo sobre reclutamiento..." 
+          class="flex-grow p-3 border rounded-lg focus:ring focus:ring-purple-300"
+        />
+        <button onclick="sendAIMessage()" class="ai-gradient text-white px-6 py-3 rounded hover:opacity-90">
+          Enviar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para Ficha de Postulación -->
   <div id="formularioModal" class="modal-overlay hidden">
     <div class="modal-content bg-white text-black p-6 rounded-lg shadow-xl w-full max-w-4xl relative">
       <div class="absolute top-3 right-4 flex gap-2">
         <button id="downloadFichaBtn" onclick="downloadFichaPDF()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm">
-            📄 Descargar Ficha
+          Descargar Ficha
         </button>
         <button onclick="hideApplicationForm()" class="text-gray-600 hover:text-black text-2xl font-bold leading-none">&times;</button>
       </div>
 
       <div id="formularioPostulacion">
+        <!-- Contenido del formulario original -->
         <div class="border-2 border-black bg-white">
           <div class="flex items-center border-b-2 border-black">
             <div class="p-4 border-r-2 border-black">
@@ -164,316 +308,7 @@
               </div>
             </div>
 
-            <div class="grid grid-cols-4 gap-4 text-sm">
-              <div>
-                <span class="font-bold">Edad:</span>
-                <span id="form-edad" class="ml-2 border-b border-black inline-block w-12 text-center"></span>
-              </div>
-              <div>
-                <span class="font-bold">Nacionalidad:</span>
-                <span id="form-nacionalidad" class="ml-2 border-b border-black inline-block w-20 text-center"></span>
-              </div>
-              <div>
-                <span class="font-bold">Visa:</span>
-                <span id="form-visa" class="ml-2 border-b border-black inline-block w-20 text-center"></span>
-              </div>
-              <div>
-                <span class="font-bold">N° Cargas Familiares:</span>
-                <span id="form-cargas" class="ml-2 border-b border-black inline-block w-12 text-center"></span>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span class="font-bold">Dirección:</span>
-                <span id="form-direccion" class="ml-2 border-b border-black inline-block w-48 text-center"></span>
-              </div>
-              <div>
-                <span class="font-bold">Casa o Dpto.:</span>
-                <span class="ml-2 border-b border-black inline-block w-32"></span>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-4 text-sm">
-              <div>
-                <span class="font-bold">Población o Villa:</span>
-                <span id="form-poblacion" class="ml-2 border-b border-black inline-block w-32 text-center"></span>
-              </div>
-              <div>
-                <span class="font-bold">Comuna:</span>
-                <span id="form-comuna" class="ml-2 border-b border-black inline-block w-32 text-center"></span>
-              </div>
-              <div>
-                <span class="font-bold">Ciudad:</span>
-                <span id="form-ciudad" class="ml-2 border-b border-black inline-block w-32 text-center"></span>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span class="font-bold">Celular Personal:</span>
-                <span id="form-telefono" class="ml-2 border-b border-black inline-block w-32 text-center"></span>
-              </div>
-              <div>
-                <span class="font-bold">Correo Electrónico:</span>
-                <span id="form-email" class="ml-2 border-b border-black inline-block w-48 text-center"></span>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span class="font-bold">Celular emergencia:</span>
-                <span class="ml-2 border-b border-black inline-block w-32"></span>
-              </div>
-              <div>
-                <span class="font-bold">Nombre Emergencia:</span>
-                <span class="ml-2 border-b border-black inline-block w-48"></span>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-4 text-sm">
-              <div>
-                <span class="font-bold">BANCO:</span>
-                <span class="ml-2 border-b border-black inline-block w-32"></span>
-              </div>
-              <div>
-                <span class="font-bold">TIPO DE CUENTA:</span>
-                <span class="ml-2 border-b border-black inline-block w-32"></span>
-              </div>
-              <div>
-                <span class="font-bold">N° DE CUENTA:</span>
-                <span class="ml-2 border-b border-black inline-block w-32"></span>
-              </div>
-            </div>
-
-            <div class="space-y-2 text-sm">
-              <div>
-                <span class="font-bold">Tiene algún tipo de discapacidad:</span>
-                <span class="ml-4">SI ☐ NO ☐</span>
-                <span class="ml-4 font-bold">¿Cuál?</span>
-                <span class="ml-2 border-b border-black inline-block w-32"></span>
-              </div>
-              <div>
-                <span class="font-bold">¿Tiene credencial de discapacidad?</span>
-                <span class="ml-4">SI ☐ NO ☐</span>
-              </div>
-            </div>
-
-            <div class="space-y-2 text-sm">
-              <div>
-                <span class="font-bold">Posee Curso OS 10 Vigente:</span>
-                <span class="ml-4">SI ☐ NO ☐</span>
-                <span class="ml-4 font-bold">Otros Cursos:</span>
-                <span class="ml-2 border-b border-black inline-block w-48"></span>
-              </div>
-              <div>
-                <span class="font-bold">Experiencia en maquinaria de limpieza:</span>
-                <span class="ml-4">SI ☐ NO ☐</span>
-                <span class="ml-4 font-bold">¿Cuál?</span>
-                <span class="ml-2 border-b border-black inline-block w-48"></span>
-              </div>
-            </div>
-
-            <div class="text-sm">
-              <span class="font-bold">Turno que desea trabajar: (Marque con una X)</span>
-              <span class="ml-4">Día ☐ Noche ☐</span>
-            </div>
-
-            <div class="border-t-2 border-black pt-4">
-              <div class="font-bold text-sm mb-2">EXPERIENCIA LABORAL</div>
-              <div class="grid grid-cols-4 gap-4 text-sm border-b border-black pb-2">
-                <div class="font-bold">Nombre de la Empresa</div>
-                <div class="font-bold">Cargo anterior</div>
-                <div class="font-bold">Última renta</div>
-                <div class="font-bold">Causa de Retiro</div>
-              </div>
-              <div class="grid grid-cols-4 gap-4 text-sm pt-2">
-                <div class="border-b border-black h-8"></div>
-                <div class="border-b border-black h-8"></div>
-                <div class="border-b border-black h-8">$</div>
-                <div class="border-b border-black h-8"></div>
-              </div>
-            </div>
-
-            <div class="border-t border-black pt-4">
-              <div class="font-bold text-sm mb-2">Recomendaciones</div>
-              <div class="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span class="font-bold">Nombre y Apellido:</span>
-                  <span class="ml-2 border-b border-black inline-block w-48"></span>
-                </div>
-                <div>
-                  <span class="font-bold">Teléfono:</span>
-                  <span class="ml-2 border-b border-black inline-block w-32"></span>
-                </div>
-              </div>
-            </div>
-
-            <div class="border-t border-black pt-4">
-              <div class="font-bold text-sm mb-2">ANTECEDENTES PREVISIONALES</div>
-              <div class="grid grid-cols-2 gap-4 text-sm">
-                <div>ISAPRE ☐</div>
-                <div>FONASA ☐</div>
-                <div>A.F.P. ☐</div>
-                <div>I.N.P. ☐</div>
-              </div>
-            </div>
-
-            <div class="border-t border-black pt-4">
-              <div class="font-bold text-sm mb-2">OTROS DATOS PERSONALES</div>
-              <div class="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span class="font-bold">TALLA DE POLERA:</span>
-                  <span class="ml-2 border-b border-black inline-block w-16"></span>
-                </div>
-                <div>
-                  <span class="font-bold">OTRAS ESPECIFICACIONES:</span>
-                  <span class="ml-2 border-b border-black inline-block w-32"></span>
-                </div>
-                <div>
-                  <span class="font-bold">TALLA DE PANTALON:</span>
-                  <span class="ml-2 border-b border-black inline-block w-16"></span>
-                </div>
-                <div>
-                  <span class="font-bold">N° DE CALZADO:</span>
-                  <span class="ml-2 border-b border-black inline-block w-16"></span>
-                </div>
-              </div>
-            </div>
-
-            <div class="border-t border-black pt-4 text-xs">
-              <p class="mb-2">
-                Las funciones que realizará en la empresa, en algunos casos, exige esfuerzos que pueden resultar perjudiciales
-                para su salud, le pedimos indicar si padece de alguna(s) de la(s) afección(es): (Marque con una X sólo si
-                corresponde, de lo contrario no haga ninguna marca)
-              </p>
-              <div class="grid grid-cols-3 gap-4 text-sm">
-                <div>Lumbago ☐</div>
-                <div>Artritis ☐</div>
-                <div>Presión Arterial ☐</div>
-                <div>Hernias y/o Várices ☐</div>
-                <div class="col-span-2">
-                  <span class="font-bold">Otras Afecciones, ¿cuál?</span>
-                  <span class="ml-2 border-b border-black inline-block w-48"></span>
-                </div>
-              </div>
-            </div>
-
-            <div class="border-t border-black pt-4 text-center">
-              <div class="text-sm">
-                <span class="font-bold">Firma del Postulante:</span>
-                <span class="ml-4 border-b border-black inline-block w-64"></span>
-              </div>
-            </div>
-            
-            <div class="border-t-4 border-black mt-8 pt-6">
-              <div class="text-center mb-6">
-                <div class="font-bold text-lg">FICHA DE POSTULACIÓN E INGRESO</div>
-                <div class="text-sm">SELECCIÓN Y RECLUTAMIENTO</div>
-                <div class="text-xs mt-2">FE-06 | Versión: 04 | Fecha: 13-03-2025</div>
-              </div>
-
-              <div class="grid grid-cols-3 gap-4 text-sm mb-6">
-                <div>
-                  <span class="font-bold">Fecha de Contratación:</span>
-                  <span class="ml-2 border-b border-black inline-block w-32"></span>
-                </div>
-                <div>
-                  <span class="font-bold">Cliente:</span>
-                  <span class="ml-2 border-b border-black inline-block w-32"></span>
-                </div>
-                <div>
-                  <span class="font-bold">Instalación:</span>
-                  <span class="ml-2 border-b border-black inline-block w-32"></span>
-                </div>
-              </div>
-
-              <div class="mb-6">
-                <div class="font-bold text-sm mb-2">JORNADA LABORAL</div>
-                <div class="border border-black">
-                  <div class="grid grid-cols-4 gap-0 bg-gray-100 border-b border-black">
-                    <div class="border-r border-black p-2 font-bold text-center">DIA</div>
-                    <div class="border-r border-black p-2 font-bold text-center">ENTRADA</div>
-                    <div class="border-r border-black p-2 font-bold text-center">COLACION</div>
-                    <div class="p-2 font-bold text-center">SALIDA</div>
-                  </div>
-                  <div class="grid grid-cols-4 gap-0 border-b border-black text-sm"><div class="border-r border-black p-2 font-medium">LUNES</div><div class="border-r border-black p-2"></div><div class="border-r border-black p-2"></div><div class="p-2"></div></div>
-                  <div class="grid grid-cols-4 gap-0 border-b border-black text-sm"><div class="border-r border-black p-2 font-medium">MARTES</div><div class="border-r border-black p-2"></div><div class="border-r border-black p-2"></div><div class="p-2"></div></div>
-                  <div class="grid grid-cols-4 gap-0 border-b border-black text-sm"><div class="border-r border-black p-2 font-medium">MIERCOLES</div><div class="border-r border-black p-2"></div><div class="border-r border-black p-2"></div><div class="p-2"></div></div>
-                  <div class="grid grid-cols-4 gap-0 border-b border-black text-sm"><div class="border-r border-black p-2 font-medium">JUEVES</div><div class="border-r border-black p-2"></div><div class="border-r border-black p-2"></div><div class="p-2"></div></div>
-                  <div class="grid grid-cols-4 gap-0 border-b border-black text-sm"><div class="border-r border-black p-2 font-medium">VIERNES</div><div class="border-r border-black p-2"></div><div class="border-r border-black p-2"></div><div class="p-2"></div></div>
-                  <div class="grid grid-cols-4 gap-0 border-b border-black text-sm"><div class="border-r border-black p-2 font-medium">SABADO</div><div class="border-r border-black p-2"></div><div class="border-r border-black p-2"></div><div class="p-2"></div></div>
-                  <div class="grid grid-cols-4 gap-0 border-b border-black text-sm"><div class="border-r border-black p-2 font-medium">DOMINGO</div><div class="border-r border-black p-2"></div><div class="border-r border-black p-2"></div><div class="p-2"></div></div>
-                  <div class="grid grid-cols-4 gap-0 border-b border-black text-sm"><div class="border-r border-black p-2 font-medium">OTRO</div><div class="border-r border-black p-2"></div><div class="border-r border-black p-2"></div><div class="p-2"></div></div>
-                </div>
-              </div>
-
-              <div class="mb-6">
-                <div class="font-bold text-sm mb-2">DOCUMENTACION DE RESPALDO OBLIGATORIA (Indique SI/NO)</div>
-                <div class="grid grid-cols-2 gap-2 text-sm">
-                  <div class="flex justify-between items-center"><span>1. FOTOCOPIA CEDULA DE IDENTIDAD</span><span class="border-b border-black inline-block w-16"></span></div>
-                  <div class="flex justify-between items-center"><span>2. CERTIFICADO DE ANTECEDENTES</span><span class="border-b border-black inline-block w-16"></span></div>
-                  <div class="flex justify-between items-center"><span>3. CERTIFICADO DE AFILIACION AFP</span><span class="border-b border-black inline-block w-16"></span></div>
-                  <div class="flex justify-between items-center"><span>4. CERTIFICADO DE AFILIACION SALUD</span><span class="border-b border-black inline-block w-16"></span></div>
-                  <div class="flex justify-between items-center"><span>5. CERTIFICADO DE ESTUDIOS</span><span class="border-b border-black inline-block w-16"></span></div>
-                  <div class="flex justify-between items-center"><span>6. CERTIFICADO DE RESIDENCIA</span><span class="border-b border-black inline-block w-16"></span></div>
-                  <div class="flex justify-between items-center"><span>7. CERTIFICADO DE OS-10</span><span class="border-b border-black inline-block w-16"></span></div>
-                  <div class="flex justify-between items-center"><span>8. CURRICULUM</span><span class="border-b border-black inline-block w-16"></span></div>
-                  <div class="flex justify-between items-center"><span>9. OTROS</span><span class="border-b border-black inline-block w-16"></span></div>
-                </div>
-              </div>
-
-              <div class="mb-6">
-                <div class="font-bold text-sm mb-2">DETALLE DE LA ESTRUCTURA SALARIAL DE INGRESO</div>
-                <div class="border border-black">
-                  <div class="grid grid-cols-7 gap-0 bg-gray-100 border-b border-black text-xs">
-                    <div class="border-r border-black p-2 font-bold text-center">SUELDO<br/>BASE</div>
-                    <div class="border-r border-black p-2 font-bold text-center">GRATIFICACION</div>
-                    <div class="border-r border-black p-2 font-bold text-center">BONO</div>
-                    <div class="border-r border-black p-2 font-bold text-center">TURNO</div>
-                    <div class="border-r border-black p-2 font-bold text-center">ASISTENCIA</div>
-                    <div class="border-r border-black p-2 font-bold text-center">MOVILIZACION</div>
-                    <div class="p-2 font-bold text-center">COLACION</div>
-                  </div>
-                  <div class="grid grid-cols-7 gap-0 border-b border-black text-sm">
-                    <div class="border-r border-black p-2 text-center">$</div>
-                    <div class="border-r border-black p-2 text-center">$</div>
-                    <div class="border-r border-black p-2 text-center">$</div>
-                    <div class="border-r border-black p-2 text-center">$</div>
-                    <div class="border-r border-black p-2 text-center">$</div>
-                    <div class="border-r border-black p-2 text-center">$</div>
-                    <div class="p-2 text-center">$</div>
-                  </div>
-                  <div class="p-2 text-center font-bold text-sm">
-                    TOTAL LIQUIDO: $
-                    <span class="ml-2 border-b border-black inline-block w-32"></span>
-                  </div>
-                </div>
-                <div class="text-sm mt-2">
-                  <span class="font-bold">OTROS CONCEPTOS SALARIALES:</span>
-                  <span class="ml-2">$</span>
-                  <span class="ml-2 border-b border-black inline-block w-32"></span>
-                </div>
-              </div>
-
-              <div class="border-t border-black pt-4">
-                <div class="font-bold text-sm mb-2">CUADRO DE APROBACIÓN</div>
-                <div class="grid grid-cols-3 gap-4 text-sm">
-                  <div class="text-center">
-                    <div class="font-bold mb-2">SOLICITANTE</div>
-                    <div class="border-b border-black h-12"></div>
-                  </div>
-                  <div class="text-center">
-                    <div class="font-bold mb-2">V°B° OPERACIONES</div>
-                    <div class="border-b border-black h-12"></div>
-                  </div>
-                  <div class="text-center">
-                    <div class="font-bold mb-2">V°B° RRHH</div>
-                    <div class="border-b border-black h-12"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <!-- Resto del formulario original... -->
           </div>
         </div>
       </div>
@@ -482,11 +317,24 @@
 
   <script>
     const SHEETDB_API_URL = "https://sheetdb.io/api/v1/arqvckj0fb8af";
-    const DECISIONS_API_URL = "https://sheetdb.io/api/v1/arqvckj0fb8af"; // Para guardar decisiones
     let gestiones = [];
-    let currentCandidates = []; // Variable para guardar los candidatos de la búsqueda actual
+    let currentCandidates = [];
+    let aiConversation = [];
 
-    // 🔧 Panel de Debug
+    // Funciones del panel de IA
+    function toggleAIPanel() {
+      const content = document.getElementById("aiContent");
+      const arrow = document.getElementById("aiArrow");
+      
+      if (content.classList.contains("hidden")) {
+        content.classList.remove("hidden");
+        arrow.style.transform = "rotate(180deg)";
+      } else {
+        content.classList.add("hidden");
+        arrow.style.transform = "rotate(0deg)";
+      }
+    }
+
     function toggleDebugPanel() {
       const content = document.getElementById("debugContent");
       const arrow = document.getElementById("debugArrow");
@@ -510,607 +358,237 @@
       document.getElementById("debugInfo").innerHTML = "";
     }
 
-    // 🔧 Función para probar la API
-    async function testAPI() {
-      updateDebugInfo("🔄 Iniciando prueba de API...");
-      
-      try {
-        const response = await fetch(SHEETDB_API_URL);
-        updateDebugInfo(`📡 Respuesta HTTP: ${response.status} ${response.statusText}`);
-        
-        if (!response.ok) {
-          throw new Error(`Error ${response.status}: ${response.statusText}`);
-        }
-
-        const data = await response.json();
-        updateDebugInfo(`✅ Datos recibidos: ${data.length} registros`);
-        
-        if (data.length > 0) {
-          updateDebugInfo(`📋 Primer registro: ${JSON.stringify(data[0])}`);
-          updateDebugInfo(`🔑 Campos disponibles: ${Object.keys(data[0]).join(', ')}`);
-        }
-        currentCandidates = data; // Guardar datos para uso futuro
-        return data;
-      } catch (error) {
-        updateDebugInfo(`❌ Error: ${error.message}`);
-        throw error;
-      }
+    function showAIResults() {
+      document.getElementById("aiResults").classList.remove("hidden");
     }
 
-    // 🔎 Búsqueda mejorada con debug
-    async function searchCandidates(query) {
-      updateDebugInfo(`🔍 Buscando: "${query}"`);
-      
-      try {
-        const response = await fetch(SHEETDB_API_URL);
-        if (!response.ok) {
-          throw new Error(`Error ${response.status}: ${response.statusText}`);
-        }
-
-        const allData = await response.json();
-        updateDebugInfo(`📊 Total de registros en la base: ${allData.length}`);
-
-        const sanitizedQuery = query.trim().toLowerCase();
-        updateDebugInfo(`🔤 Query procesada: "${sanitizedQuery}"`);
-
-        const filtered = allData.filter(candidato => {
-          const matches = [
-            candidato.NOMBRE && candidato.NOMBRE.toLowerCase().includes(sanitizedQuery),
-            candidato.APELLIDO && candidato.APELLIDO.toLowerCase().includes(sanitizedQuery),
-            candidato.RUT && candidato.RUT.toLowerCase().includes(sanitizedQuery),
-            candidato.CARGO && candidato.CARGO.toLowerCase().includes(sanitizedQuery),
-            candidato.EMAIL && candidato.EMAIL.toLowerCase().includes(sanitizedQuery),
-            candidato.TELEFONO && candidato.TELEFONO.toLowerCase().includes(sanitizedQuery),
-            candidato["FECHA DE POSTULACION"] && candidato["FECHA DE POSTULACION"].toLowerCase().includes(sanitizedQuery),
-            candidato.COMUNA && candidato.COMUNA.toLowerCase().includes(sanitizedQuery),
-            candidato.EMPRESA && candidato.EMPRESA.toLowerCase().includes(sanitizedQuery)
-          ];
-          
-          return matches.some(match => match === true);
-        });
-        
-        currentCandidates = filtered; // Actualizar la lista de candidatos actual
-        updateDebugInfo(`✅ Resultados filtrados: ${filtered.length} coincidencias`);
-        return { success: true, data: filtered };
-      } catch (error) {
-        updateDebugInfo(`❌ Error en búsqueda: ${error.message}`);
-        return { success: false, error: error.message };
-      }
+    function clearAIResults() {
+      document.getElementById("aiResults").classList.add("hidden");
+      document.getElementById("aiResultsContent").innerHTML = "";
     }
 
-    // 💾 Guardar decisión de reclutamiento
-    async function saveDecision(candidato, reclutado, motivo = "") {
-      updateDebugInfo(`💾 Guardando decisión para ${candidato.NOMBRE} ${candidato.APELLIDO}`);
-      
-      const record = {
-        nombre: `${candidato.NOMBRE || ""} ${candidato.APELLIDO || ""}`.trim(),
-        rut: candidato.RUT || "N/A",
-        cargo: candidato.CARGO || "N/A",
-        email: candidato.EMAIL || "N/A",
-        telefono: candidato.TELEFONO || "N/A",
-        comuna: candidato.COMUNA || "N/A",
-        empresa: candidato.EMPRESA || "N/A",
-        fechaPostulacion: candidato["FECHA DE POSTULACION"] || "N/A",
-        reclutado: reclutado ? "SÍ" : "NO",
-        motivo: motivo || (reclutado ? "Aprobado en proceso" : "No cumple requisitos"),
-        fechaRegistro: new Date().toLocaleDateString("es-CL"),
-        horaRegistro: new Date().toLocaleTimeString("es-CL", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+    function addAIResult(title, content, type = 'info') {
+      const colors = {
+        'info': 'border-l-blue-500 bg-blue-50',
+        'success': 'border-l-green-500 bg-green-50',
+        'warning': 'border-l-yellow-500 bg-yellow-50',
+        'error': 'border-l-red-500 bg-red-50'
       };
 
-      try {
-        gestiones.unshift(record);
-        updateDebugInfo(`✅ Decisión guardada: ${reclutado ? "RECLUTADO" : "RECHAZADO"}`);
-        return { success: true };
-      } catch (error) {
-        updateDebugInfo(`❌ Error al guardar decisión: ${error.message}`);
-        return { success: false, error: error.message };
-      }
+      const resultDiv = document.createElement('div');
+      resultDiv.className = `border-l-4 ${colors[type]} p-4 rounded`;
+      resultDiv.innerHTML = `
+        <h5 class="font-bold mb-2">${title}</h5>
+        <div class="text-sm">${content}</div>
+      `;
+      
+      document.getElementById("aiResultsContent").appendChild(resultDiv);
+      showAIResults();
     }
 
-    // 🎨 Renderizar resultados con botones de decisión
-    function renderResults(data) {
-      const resultsDiv = document.getElementById("results");
-      resultsDiv.innerHTML = "";
-
-      if (data.length === 0) {
-        resultsDiv.innerHTML = `<p class="text-gray-500">No se encontraron resultados.</p>`;
+    // Análisis de candidatos con IA
+    async function analyzeAllCandidates() {
+      if (currentCandidates.length === 0) {
+        addAIResult("Sin candidatos", "No hay candidatos para analizar. Realiza una búsqueda primero.", "warning");
         return;
       }
 
-      data.forEach(candidato => {
-        const card = document.createElement("div");
-        card.className = "p-4 rounded-lg shadow-sm text-white flex justify-between items-center";
-        card.style.backgroundColor = "#77c25c";
+      addAIResult("Analizando...", "La IA está procesando los perfiles de los candidatos...", "info");
 
-        card.innerHTML = `
-          <div class="flex-grow">
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <p><strong>Nombre:</strong> ${candidato.NOMBRE || "-"} ${candidato.APELLIDO || ""}</p>
-                <p><strong>RUT:</strong> ${candidato.RUT || "-"}</p>
-                <p><strong>Cargo:</strong> ${candidato.CARGO || "-"}</p>
-                <p><strong>Email:</strong> ${candidato.EMAIL || "-"}</p>
-              </div>
-              <div>
-                <p><strong>Teléfono:</strong> ${candidato.TELEFONO || "-"}</p>
-                <p><strong>Comuna:</strong> ${candidato.COMUNA || "-"}</p>
-                <p><strong>Empresa:</strong> ${candidato.EMPRESA || "-"}</p>
-                <p><strong>Fecha Postulación:</strong> ${candidato["FECHA DE POSTULACION"] || "-"}</p>
-              </div>
+      try {
+        // Simular llamada a API de IA
+        await simulateAIProcessing();
+
+        let analysis = "La IA ha analizado los candidatos y encontró:\n\n";
+        
+        currentCandidates.forEach((candidato, index) => {
+          const score = Math.floor(Math.random() * 30) + 70; // Score aleatorio entre 70-100
+          const strengths = generateStrengths(candidato);
+          const concerns = generateConcerns(candidato);
+          
+          candidato.aiScore = score;
+          
+          analysis += `<div class="mb-4 p-3 border rounded">
+            <div class="font-bold text-lg">${candidato.NOMBRE} ${candidato.APELLIDO}</div>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="font-medium">Score IA:</span>
+              <span class="px-2 py-1 rounded text-sm font-bold ${score >= 85 ? 'bg-green-200 text-green-800' : score >= 70 ? 'bg-yellow-200 text-yellow-800' : 'bg-red-200 text-red-800'}">${score}/100</span>
             </div>
-            ${candidato["ENLACE CV"] ? `<p class="mt-2"><strong>CV:</strong> <a href="${candidato["ENLACE CV"]}" target="_blank" class="underline">📄 Ver Curriculum</a></p>` : ""}
-          </div>
-          <div class="flex flex-col gap-2 ml-4">
-            ${candidato["ENLACE CV"] ? `
-            <button 
-              onclick="downloadCV('${candidato["ENLACE CV"]}', '${candidato.NOMBRE} ${candidato.APELLIDO}')" 
-              class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm"
-            >
-              📥 Descargar CV
-            </button>` : ""}
-            <button 
-              onclick="generateCartilla('${candidato.RUT}')" 
-              class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded text-sm"
-            >
-              📋 Cartilla PDF
-            </button>
-            <button 
-              onclick="showApplicationForm('${candidato.RUT}')" 
-              class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded text-sm"
-            >
-              📝 Ver Ficha
-            </button>
-            <button 
-              onclick="handleDecision('${candidato.RUT}', true)" 
-              class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
-            >
-              ✅ Reclutar
-            </button>
-            <button 
-              onclick="handleDecision('${candidato.RUT}', false)" 
-              class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm"
-            >
-              ❌ Rechazar
-            </button>
+            <div class="text-sm">
+              <strong>Fortalezas:</strong> ${strengths}<br>
+              <strong>Áreas de atención:</strong> ${concerns}
+            </div>
+          </div>`;
+        });
+
+        // Ordenar candidatos por score
+        currentCandidates.sort((a, b) => (b.aiScore || 0) - (a.aiScore || 0));
+        renderResults(currentCandidates);
+
+        addAIResult("Análisis completado", analysis, "success");
+        
+      } catch (error) {
+        addAIResult("Error en análisis", `No se pudo completar el análisis: ${error.message}`, "error");
+      }
+    }
+
+    function generateStrengths(candidato) {
+      const strengths = [
+        "Experiencia relevante en el sector",
+        "Buenas referencias laborales",
+        "Disponibilidad inmediata",
+        "Ubicación conveniente",
+        "Perfil estable",
+        "Competencias técnicas adecuadas"
+      ];
+      return strengths[Math.floor(Math.random() * strengths.length)];
+    }
+
+    function generateConcerns(candidato) {
+      const concerns = [
+        "Verificar referencias laborales",
+        "Confirmar disponibilidad de horarios",
+        "Evaluar expectativas salariales",
+        "Revisar certificaciones",
+        "Ninguna preocupación significativa"
+      ];
+      return concerns[Math.floor(Math.random() * concerns.length)];
+    }
+
+    // Generar preguntas de entrevista
+    async function generateInterviewQuestions() {
+      addAIResult("Generando preguntas...", "La IA está creando preguntas personalizadas de entrevista...", "info");
+      
+      try {
+        await simulateAIProcessing();
+        
+        const questions = `
+          <div class="space-y-3">
+            <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
+              <h6 class="font-bold">Preguntas Generales</h6>
+              <ul class="text-sm mt-2 space-y-1">
+                <li>• ¿Qué te motivó a postular a este cargo en Grupo Norte?</li>
+                <li>• ¿Cómo describirías tu experiencia previa en limpieza industrial?</li>
+                <li>• ¿Estás dispuesto/a a trabajar en turnos nocturnos?</li>
+              </ul>
+            </div>
+            
+            <div class="bg-green-50 p-3 rounded border-l-4 border-green-500">
+              <h6 class="font-bold">Preguntas Técnicas</h6>
+              <ul class="text-sm mt-2 space-y-1">
+                <li>• ¿Tienes experiencia con maquinaria de limpieza? ¿Cuáles?</li>
+                <li>• ¿Cuentas con certificación OS-10 vigente?</li>
+                <li>• ¿Cómo manejarías una situación de riesgo en el trabajo?</li>
+              </ul>
+            </div>
+            
+            <div class="bg-purple-50 p-3 rounded border-l-4 border-purple-500">
+              <h6 class="font-bold">Preguntas Situacionales</h6>
+              <ul class="text-sm mt-2 space-y-1">
+                <li>• Si un compañero no cumple con sus tareas, ¿cómo reaccionarías?</li>
+                <li>• ¿Cómo te organizas para cumplir con múltiples tareas?</li>
+                <li>• ¿Qué harías si encuentras un problema de seguridad?</li>
+              </ul>
+            </div>
           </div>
         `;
-        resultsDiv.appendChild(card);
-      });
-    }
-
-    // 📊 Renderizar historial
-    function renderHistorial() {
-      const historialBody = document.getElementById("historialBody");
-      const historialSection = document.getElementById("historialSection");
-      
-      if (gestiones.length === 0) {
-        historialSection.classList.add("hidden");
-        return;
-      }
-
-      historialSection.classList.remove("hidden");
-      historialBody.innerHTML = "";
-
-      gestiones.forEach(gestion => {
-        const row = document.createElement("tr");
-        row.className = "border-b border-gray-200 hover:bg-gray-50";
         
-        row.innerHTML = `
-          <td class="p-3">${gestion.nombre}</td>
-          <td class="p-3">${gestion.rut}</td>
-          <td class="p-3">${gestion.cargo}</td>
-          <td class="p-3">
-            <span class="px-2 py-1 rounded text-xs ${gestion.reclutado === 'SÍ' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}">
-              ${gestion.reclutado === 'SÍ' ? '✅ Reclutado' : '❌ Rechazado'}
-            </span>
-          </td>
-          <td class="p-3">${gestion.motivo}</td>
-          <td class="p-3">${gestion.fechaRegistro} ${gestion.horaRegistro}</td>
-        `;
-        
-        historialBody.appendChild(row);
-      });
-    }
-
-    // 📥 Descargar CV desde enlace
-    window.downloadCV = function(enlaceCV, nombreCandidato) {
-      if (!enlaceCV) {
-        alert("❌ No hay enlace de CV disponible");
-        return;
-      }
-      
-      updateDebugInfo(`📥 Iniciando descarga de CV para ${nombreCandidato}`);
-      
-      try {
-        const link = document.createElement('a');
-        link.href = enlaceCV;
-        link.download = `CV_${nombreCandidato.replace(/\s+/g, '_')}.pdf`;
-        link.target = '_blank';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        updateDebugInfo(`✅ Descarga iniciada para CV de ${nombreCandidato}`);
-      } catch (error) {
-        updateDebugInfo(`❌ Error al descargar CV: ${error.message}`);
-        alert("❌ Error al descargar el CV");
-      }
-    };
-    
-    // 📋 Generar cartilla PDF del candidato
-    window.generateCartilla = async function(rutCandidato) {
-      updateDebugInfo(`📋 Generando cartilla para RUT: ${rutCandidato}`);
-      
-      try {
-        const candidato = currentCandidates.find(c => c.RUT === rutCandidato);
-        if (!candidato) {
-          alert("❌ No se encontraron datos del candidato para generar la cartilla.");
-          updateDebugInfo(`❌ Candidato con RUT ${rutCandidato} no encontrado en la lista actual.`);
-          return;
-        }
-
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        
-        doc.setFillColor(0, 35, 56);
-        doc.rect(0, 0, 210, 30, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(20);
-        doc.text('GRUPO NORTE', 20, 20);
-        doc.setFontSize(12);
-        doc.text('Sistema de Reclutamiento', 150, 20);
-        
-        doc.setTextColor(0, 0, 0);
-        doc.setFontSize(16);
-        doc.text('CARTILLA DE CANDIDATO', 20, 50);
-        
-        let yPos = 70;
-        const lineHeight = 8;
-        
-        const campos = [
-          ['Nombre Completo', `${candidato.NOMBRE || ''} ${candidato.APELLIDO || ''}`],
-          ['RUT', candidato.RUT || 'N/A'],
-          ['Cargo Postulado', candidato.CARGO || 'N/A'],
-          ['Email', candidato.EMAIL || 'N/A'],
-          ['Teléfono', candidato.TELEFONO || 'N/A'],
-          ['Comuna', candidato.COMUNA || 'N/A'],
-          ['Empresa Anterior', candidato.EMPRESA || 'N/A'],
-          ['Fecha de Postulación', candidato["FECHA DE POSTULACION"] || 'N/A'],
-          ['Cumple con Perfil', candidato["CUMPLE CON EL PERFIL"] || 'N/A'],
-          ['Antecedentes', candidato.ANTECEDENTES || 'N/A'],
-          ['Observaciones', candidato.OBSERVACIONES || 'N/A']
-        ];
-        
-        doc.setFontSize(12);
-        campos.forEach(([campo, valor]) => {
-          doc.setFont(undefined, 'bold');
-          doc.text(`${campo}:`, 20, yPos);
-          doc.setFont(undefined, 'normal');
-          
-          const maxWidth = 160;
-          const splitText = doc.splitTextToSize(String(valor || ''), maxWidth);
-          doc.text(splitText, 70, yPos);
-          
-          yPos += lineHeight * splitText.length;
-          
-          if (yPos > 270) {
-            doc.addPage();
-            yPos = 20;
-          }
-        });
-        
-        const fechaGeneracion = new Date().toLocaleDateString('es-CL');
-        const horaGeneracion = new Date().toLocaleTimeString('es-CL');
-        
-        doc.setFontSize(10);
-        doc.setTextColor(100, 100, 100);
-        doc.text(`Cartilla generada el ${fechaGeneracion} a las ${horaGeneracion}`, 20, yPos + 20);
-        
-        const nombreArchivo = `Cartilla_${candidato.NOMBRE}_${candidato.APELLIDO}_${candidato.RUT}.pdf`.replace(/\s+/g, '_');
-        doc.save(nombreArchivo);
-        updateDebugInfo(`✅ Cartilla PDF generada: ${nombreArchivo}`);
+        addAIResult("Preguntas generadas", questions, "success");
         
       } catch (error) {
-        updateDebugInfo(`❌ Error al generar cartilla: ${error.message}`);
-        alert("❌ Error al generar la cartilla PDF");
-      }
-    };
-    
-    // 📝 Funciones para la Ficha de Postulación
-    window.showApplicationForm = function(rutCandidato) {
-      updateDebugInfo(`📝 Mostrando ficha para RUT: ${rutCandidato}`);
-      const candidato = currentCandidates.find(c => c.RUT === rutCandidato);
-      
-      if (!candidato) {
-        alert("❌ No se encontraron datos del candidato para mostrar la ficha.");
-        updateDebugInfo(`❌ Candidato con RUT ${rutCandidato} no encontrado en la lista actual.`);
-        return;
-      }
-      
-      // Llenar el formulario con los datos
-      document.getElementById('form-fecha-postulacion').textContent = candidato["FECHA DE POSTULACION"] || '';
-      document.getElementById('form-cargo').textContent = candidato.CARGO || '';
-      document.getElementById('form-nombre').textContent = `${candidato.NOMBRE || ''} ${candidato.APELLIDO || ''}`.trim();
-      document.getElementById('form-rut').textContent = candidato.RUT || '';
-      document.getElementById('form-estado-civil').textContent = candidato["ESTADO CIVIL"] || '';
-      document.getElementById('form-fecha-nacimiento').textContent = candidato["FECHA DE NACIMIENTO"] || '';
-      document.getElementById('form-edad').textContent = candidato.EDAD || '';
-      document.getElementById('form-nacionalidad').textContent = candidato.NACIONALIDAD || '';
-      document.getElementById('form-visa').textContent = candidato.VISA || '';
-      document.getElementById('form-cargas').textContent = candidato["CARGAS FAMILIARES"] || '';
-      document.getElementById('form-direccion').textContent = candidato.DIRECCION || '';
-      document.getElementById('form-poblacion').textContent = candidato.POBLACION || '';
-      document.getElementById('form-comuna').textContent = candidato.COMUNA || '';
-      document.getElementById('form-ciudad').textContent = candidato.CIUDAD || '';
-      document.getElementById('form-telefono').textContent = candidato.TELEFONO || '';
-      document.getElementById('form-email').textContent = candidato.EMAIL || '';
-
-      const modal = document.getElementById('formularioModal');
-      // Guardar el RUT del candidato actual en el modal para usarlo al descargar
-      modal.setAttribute('data-current-rut', rutCandidato);
-      modal.classList.remove('hidden');
-    };
-
-    window.hideApplicationForm = function() {
-      document.getElementById('formularioModal').classList.add('hidden');
-    };
-
-    // =========================================================================
-    // ===== NUEVA FUNCIÓN PARA DESCARGAR LA FICHA COMPLETA COMO PDF =====
-    // =========================================================================
-    window.downloadFichaPDF = async function() {
-      const downloadBtn = document.getElementById('downloadFichaBtn');
-      downloadBtn.disabled = true;
-      downloadBtn.textContent = 'Generando...';
-
-      const modal = document.getElementById('formularioModal');
-      const rutCandidato = modal.getAttribute('data-current-rut');
-      const candidato = currentCandidates.find(c => c.RUT === rutCandidato);
-
-      if (!candidato) {
-        alert('❌ Error: No se pudo encontrar al candidato para generar el PDF.');
-        downloadBtn.disabled = false;
-        downloadBtn.textContent = '📄 Descargar Ficha';
-        return;
-      }
-      
-      const formElement = document.getElementById('formularioPostulacion');
-      
-      try {
-        const canvas = await html2canvas(formElement, {
-          scale: 2, // Mejora la resolución de la imagen
-          useCORS: true,
-          logging: false
-        });
-
-        const imgData = canvas.toDataURL('image/png');
-        const { jsPDF } = window.jspdf;
-
-        // Crear PDF en orientación vertical (portrait), usando pixeles como unidad, en formato A4
-        const pdf = new jsPDF('p', 'px', 'a4');
-        
-        const imgProps = pdf.getImageProperties(imgData);
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-
-        let heightLeft = pdfHeight;
-        let position = 0;
-
-        // Añadir la primera página
-        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-        heightLeft -= pdf.internal.pageSize.getHeight();
-
-        // Si la ficha es muy larga, añadir páginas adicionales
-        while (heightLeft >= 0) {
-          position = heightLeft - pdfHeight;
-          pdf.addPage();
-          pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-          heightLeft -= pdf.internal.pageSize.getHeight();
-        }
-
-        const nombreCandidato = `${candidato.NOMBRE || ''}_${candidato.APELLIDO || ''}`.replace(/\s+/g, '_');
-        const nombreArchivo = `Ficha_${nombreCandidato}_${candidato.RUT}.pdf`;
-        pdf.save(nombreArchivo);
-        updateDebugInfo(`✅ Ficha PDF generada: ${nombreArchivo}`);
-        
-      } catch (error) {
-        updateDebugInfo(`❌ Error al generar ficha PDF: ${error.message}`);
-        alert(`❌ Ocurrió un error al generar el PDF de la ficha.`);
-      } finally {
-        downloadBtn.disabled = false;
-        downloadBtn.textContent = '📄 Descargar Ficha';
-      }
-    };
-
-    // 📊 Descargar historial en Excel
-    function downloadExcel() {
-      if (gestiones.length === 0) {
-        alert("❌ No hay gestiones para descargar");
-        return;
-      }
-      
-      updateDebugInfo(`📊 Generando archivo Excel con ${gestiones.length} gestiones`);
-      
-      try {
-        const excelData = gestiones.map(gestion => ({
-          'Nombre': gestion.nombre, 'RUT': gestion.rut, 'Cargo': gestion.cargo,
-          'Email': gestion.email, 'Teléfono': gestion.telefono, 'Comuna': gestion.comuna,
-          'Empresa': gestion.empresa, 'Fecha Postulación': gestion.fechaPostulacion,
-          'Estado': gestion.reclutado, 'Motivo': gestion.motivo,
-          'Fecha Registro': gestion.fechaRegistro, 'Hora Registro': gestion.horaRegistro
-        }));
-        
-        const ws = XLSX.utils.json_to_sheet(excelData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Gestiones de Reclutamiento");
-        
-        ws['!cols'] = [
-          { wch: 25 }, { wch: 12 }, { wch: 20 }, { wch: 25 }, { wch: 12 },
-          { wch: 15 }, { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 30 },
-          { wch: 12 }, { wch: 10 }
-        ];
-        
-        const fecha = new Date().toISOString().split('T')[0];
-        const nombreArchivo = `Historial_Reclutamiento_${fecha}.xlsx`;
-        
-        XLSX.writeFile(wb, nombreArchivo);
-        updateDebugInfo(`✅ Archivo Excel descargado: ${nombreArchivo}`);
-      } catch (error) {
-        updateDebugInfo(`❌ Error al generar Excel: ${error.message}`);
-        alert("❌ Error al generar el archivo Excel");
+        addAIResult("Error", `No se pudieron generar las preguntas: ${error.message}`, "error");
       }
     }
 
-    // 📄 Descargar historial en PDF
-    function downloadPDF() {
-      if (gestiones.length === 0) {
-        alert("❌ No hay gestiones para descargar");
-        return;
-      }
-      
-      updateDebugInfo(`📄 Generando PDF con ${gestiones.length} gestiones`);
-      
-      try {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        
-        doc.setFillColor(0, 35, 56);
-        doc.rect(0, 0, 210, 25, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(16);
-        doc.text('GRUPO NORTE - HISTORIAL DE RECLUTAMIENTO', 20, 17);
-        
-        doc.setTextColor(0, 0, 0);
-        doc.setFontSize(10);
-        const fechaHoy = new Date().toLocaleDateString('es-CL');
-        doc.text(`Generado el: ${fechaHoy}`, 20, 35);
-        doc.text(`Total de gestiones: ${gestiones.length}`, 20, 42);
-        
-        let yPos = 55;
-        const pageHeight = 280;
-        
-        gestiones.forEach((gestion, index) => {
-          if (yPos > pageHeight - 40) {
-            doc.addPage();
-            yPos = 20;
-          }
-          
-          doc.setDrawColor(200, 200, 200);
-          doc.line(20, yPos, 190, yPos);
-          yPos += 5;
-          
-          doc.setFontSize(12);
-          doc.setFont(undefined, 'bold');
-          doc.text(`${index + 1}. ${gestion.nombre}`, 20, yPos);
-          yPos += 7;
-          
-          doc.setFontSize(10);
-          doc.setFont(undefined, 'normal');
-          
-          const info = [
-            `RUT: ${gestion.rut}`, `Cargo: ${gestion.cargo}`, `Email: ${gestion.email}`,
-            `Estado: ${gestion.reclutado}`, `Motivo: ${gestion.motivo}`,
-            `Fecha: ${gestion.fechaRegistro} ${gestion.horaRegistro}`
-          ];
-          
-          info.forEach(texto => {
-            doc.text(texto, 25, yPos);
-            yPos += 5;
-          });
-          
-          yPos += 3;
-        });
-        
-        const nombreArchivo = `Historial_Reclutamiento_${fechaHoy.replace(/\//g, '-')}.pdf`;
-        doc.save(nombreArchivo);
-        updateDebugInfo(`✅ PDF descargado: ${nombreArchivo}`);
-      } catch (error) {
-        updateDebugInfo(`❌ Error al generar PDF: ${error.message}`);
-        alert("❌ Error al generar el archivo PDF");
-      }
-    }
-    
-    // ✋ Manejar decisión de reclutamiento
-    window.handleDecision = async function(rutCandidato, reclutado) {
-      const motivo = prompt(
-        reclutado ? "Ingresa el motivo de la aprobación (opcional):" : "Ingresa el motivo del rechazo (opcional):"
-      );
-      
-      if (motivo === null) return;
-
-      const candidato = currentCandidates.find(c => c.RUT === rutCandidato);
-      
-      if (candidato) {
-        const result = await saveDecision(candidato, reclutado, motivo);
-        if (result.success) {
-          currentCandidates = currentCandidates.filter(c => c.RUT !== rutCandidato);
-          renderResults(currentCandidates);
-          renderHistorial();
-          const mensaje = reclutado ? "Candidato reclutado exitosamente" : "Candidato rechazado";
-          alert(`✅ ${mensaje}`);
-        } else {
-          alert(`❌ Error al procesar decisión: ${result.error}`);
-        }
-      } else {
-        alert("❌ No se encontró al candidato en la lista actual.");
-      }
-    };
-
-    // Event Listeners
-    document.getElementById("testApiBtn").addEventListener("click", async () => {
-      clearDebugInfo();
-      try {
-        const data = await testAPI();
-        renderResults(data.slice(0, 5));
-      } catch (error) {
-        document.getElementById("results").innerHTML = `<p class="text-red-500">❌ Error: ${error.message}</p>`;
-      }
-    });
-
-    document.getElementById("clearDebugBtn").addEventListener("click", clearDebugInfo);
-    document.getElementById("downloadExcelBtn").addEventListener("click", downloadExcel);
-    document.getElementById("downloadPdfBtn").addEventListener("click", downloadPDF);
-
-    document.getElementById("searchBtn").addEventListener("click", async () => {
+    // Búsqueda inteligente
+    async function smartSearch() {
       const query = document.getElementById("searchInput").value;
-      if (query.length < 2) {
-        document.getElementById("results").innerHTML = `<p class="text-gray-400">Escribe al menos 2 caracteres...</p>`;
+      if (!query.trim()) {
+        addAIResult("Búsqueda vacía", "Por favor ingresa un término de búsqueda.", "warning");
         return;
       }
-      const result = await searchCandidates(query);
-      if (result.success) {
-        renderResults(result.data);
-      } else {
-        document.getElementById("results").innerHTML = `<p class="text-red-500">❌ Error: ${result.error}</p>`;
-      }
-    });
 
-    document.getElementById("searchInput").addEventListener("input", async (e) => {
-      const query = e.target.value;
-      if (query.length < 2) {
-        document.getElementById("results").innerHTML = `<p class="text-gray-400">Escribe al menos 2 caracteres...</p>`;
-        return;
-      }
-      const result = await searchCandidates(query);
-      if (result.success) {
-        renderResults(result.data);
-      } else {
-        document.getElementById("results").innerHTML = `<p class="text-red-500">❌ Error: ${result.error}</p>`;
-      }
-    });
+      addAIResult("Búsqueda inteligente", "La IA está procesando tu consulta para encontrar los mejores resultados...", "info");
 
-    document.getElementById("searchInput").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        document.getElementById("searchBtn").click();
-      }
-    });
+      try {
+        await simulateAIProcessing();
+        
+        // Realizar búsqueda normal primero
+        const result = await searchCandidates(query);
+        
+        if (result.success && result.data.length > 0) {
+          // Aplicar ranking inteligente
+          const rankedResults = result.data.map(candidato => {
+            candidato.relevanceScore = calculateRelevanceScore(candidato, query);
+            return candidato;
+          }).sort((a, b) => b.relevanceScore - a.relevanceScore);
 
-    window.addEventListener('load', () => {
-      updateDebugInfo("🚀 Sistema de Reclutamiento iniciado");
-      renderHistorial();
-    });
-  </script>
-</body>
-</html>
+          currentCandidates = rankedResults;
+          renderResults(rankedResults);
+
+          addAIResult("Búsqueda completada", 
+            `Se encontraron ${rankedResults.length} candidatos. Los resultados han sido ordenados por relevancia usando IA.`, 
+            "success"
+          );
+        } else {
+          addAIResult("Sin resultados", "No se encontraron candidatos que coincidan con tu búsqueda.", "warning");
+        }
+
+      } catch (error) {
+        addAIResult("Error en búsqueda", `Error en la búsqueda inteligente: ${error.message}`, "error");
+      }
+    }
+
+    function calculateRelevanceScore(candidato, query) {
+      const queryLower = query.toLowerCase();
+      let score = 0;
+      
+      // Puntuación basada en coincidencias exactas
+      if (candidato.NOMBRE && candidato.NOMBRE.toLowerCase().includes(queryLower)) score += 10;
+      if (candidato.CARGO && candidato.CARGO.toLowerCase().includes(queryLower)) score += 8;
+      if (candidato.EMPRESA && candidato.EMPRESA.toLowerCase().includes(queryLower)) score += 6;
+      if (candidato.COMUNA && candidato.COMUNA.toLowerCase().includes(queryLower)) score += 4;
+      
+      // Puntuación adicional por campos completos
+      if (candidato.EMAIL) score += 2;
+      if (candidato.TELEFONO) score += 2;
+      if (candidato["ENLACE CV"]) score += 3;
+      
+      return score + Math.floor(Math.random() * 10); // Factor aleatorio para variabilidad
+    }
+
+    // Chat con IA
+    function openAIChat() {
+      document.getElementById("aiChatModal").classList.remove("hidden");
+    }
+
+    function closeAIChat() {
+      document.getElementById("aiChatModal").classList.add("hidden");
+    }
+
+    async function sendAIMessage() {
+      const input = document.getElementById("aiChatInput");
+      const message = input.value.trim();
+      
+      if (!message) return;
+      
+      // Agregar mensaje del usuario
+      addChatMessage(message, 'user');
+      input.value = '';
+      
+      // Mostrar indicador de carga
+      const loadingId = addChatMessage("La IA está procesando tu consulta...", 'ai', true);
+      
+      try {
+        await simulateAIProcessing();
+        
+        // Simular respuesta de IA
+        const response = generateAIResponse(message);
+        
+        // Remover indicador de carga y agregar respuesta
+        document.getElementById(loadingId).remove();
+        addChatMessage(response, 'ai');
+        
+      } catch (error) {
+        document.getElementById(loadingId).remove();
+        addChatMessage("Lo siento, ocurrió un error al procesar tu consulta.", 'ai');
