@@ -32,7 +32,7 @@
     }
 
     /* ================================================= */
-    /* ===== NUEVOS ESTILOS PARA INTERACTIVIDAD ===== */
+    /* ===== ESTILOS BASE Y ANIMACIONES ===== */
     /* ================================================= */
     body {
       background-color: #002338;
@@ -57,31 +57,133 @@
       z-index: -1;
     }
 
-    body::after {
-        content: '';
-        position: fixed;
-        width: 1000px;
-        height: 1000px;
-        top: -500px;
-        left: -500px;
-        background: radial-gradient(circle, rgba(119, 194, 92, 0.6) 0%, transparent 70%);
-        animation: move-bg 30s linear infinite;
-        z-index: -1;
-        opacity: 0.3;
+    /* ================================================= */
+    /* ===== ESTILOS PARA BURBUJAS ANIMADAS ===== */
+    /* ================================================= */
+    .bubbles {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -2; /* Detrás de todo lo demás pero sobre el fondo principal */
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .bubble {
+      position: absolute;
+      bottom: -150px; /* Inician fuera de la pantalla */
+      width: 40px;
+      height: 40px;
+      background-color: rgba(119, 194, 92, 0.3); /* Verde principal con transparencia */
+      border-radius: 50%;
+      animation: bubble-up 15s infinite ease-in;
+      opacity: 0;
+    }
+
+    .bubble:nth-child(1) {
+      left: 10%;
+      width: 60px;
+      height: 60px;
+      animation-duration: 12s;
+      animation-delay: 0s;
+      background-color: rgba(169, 214, 255, 0.2); /* Azul cielo */
+    }
+    .bubble:nth-child(2) {
+      left: 20%;
+      width: 80px;
+      height: 80px;
+      animation-duration: 15s;
+      animation-delay: 2s;
+      background-color: rgba(184, 221, 181, 0.3); /* Verde Lima */
+    }
+    .bubble:nth-child(3) {
+      left: 35%;
+      width: 50px;
+      height: 50px;
+      animation-duration: 10s;
+      animation-delay: 4s;
+      background-color: rgba(119, 194, 92, 0.4); /* Verde principal */
+    }
+    .bubble:nth-child(4) {
+      left: 50%;
+      width: 70px;
+      height: 70px;
+      animation-duration: 18s;
+      animation-delay: 0s;
+      background-color: rgba(169, 214, 255, 0.25); /* Azul cielo */
+    }
+    .bubble:nth-child(5) {
+      left: 65%;
+      width: 90px;
+      height: 90px;
+      animation-duration: 14s;
+      animation-delay: 5s;
+      background-color: rgba(184, 221, 181, 0.35); /* Verde Lima */
+    }
+    .bubble:nth-child(6) {
+      left: 75%;
+      width: 55px;
+      height: 55px;
+      animation-duration: 11s;
+      animation-delay: 1s;
+      background-color: rgba(119, 194, 92, 0.3); /* Verde principal */
+    }
+    .bubble:nth-child(7) {
+      left: 85%;
+      width: 75px;
+      height: 75px;
+      animation-duration: 16s;
+      animation-delay: 3s;
+      background-color: rgba(169, 214, 255, 0.2); /* Azul cielo */
+    }
+    .bubble:nth-child(8) {
+      left: 5%;
+      width: 45px;
+      height: 45px;
+      animation-duration: 13s;
+      animation-delay: 6s;
+      background-color: rgba(184, 221, 181, 0.3); /* Verde Lima */
+    }
+    .bubble:nth-child(9) {
+      left: 40%;
+      width: 85px;
+      height: 85px;
+      animation-duration: 17s;
+      animation-delay: 2s;
+      background-color: rgba(119, 194, 92, 0.3); /* Verde principal */
+    }
+    .bubble:nth-child(10) {
+      left: 90%;
+      width: 65px;
+      height: 65px;
+      animation-duration: 10s;
+      animation-delay: 4s;
+      background-color: rgba(169, 214, 255, 0.25); /* Azul cielo */
+    }
+
+    @keyframes bubble-up {
+      0% {
+        transform: translateY(0);
+        opacity: 0;
+      }
+      10% {
+        opacity: 1;
+      }
+      90% {
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(-100vh); /* Suben hasta salir por arriba */
+        opacity: 0;
+      }
     }
 
     @keyframes pulse {
       0% { transform: scale(1); }
       50% { transform: scale(1.05); }
       100% { transform: scale(1); }
-    }
-
-    @keyframes move-bg {
-        0% { transform: translate(0, 0); }
-        25% { transform: translate(100px, 100px); }
-        50% { transform: translate(200px, -50px); }
-        75% { transform: translate(-100px, 50px); }
-        100% { transform: translate(0, 0); }
     }
 
     .animate-pulse-on-load {
@@ -101,6 +203,18 @@
   </style>
 </head>
 <body class="min-h-screen">
+  <div class="bubbles">
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+  </div>
 
   <header class="w-full py-4 bg-[#002338] shadow-lg">
     <div class="max-w-5xl mx-auto flex justify-center items-center gap-6">
