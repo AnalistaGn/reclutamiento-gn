@@ -27,16 +27,83 @@
       max-height: 90vh;
       overflow-y: auto;
     }
+
+    /* ================================================= */
+    /* ===== NUEVOS ESTILOS PARA INTERACTIVIDAD ===== */
+    /* ================================================= */
+    body {
+      background-color: #002338;
+      background-image: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('https://raw.githubusercontent.com/AnalistaGn/dashboard-gn-e/main/bg-pattern.jpg');
+      background-size: 200px;
+      background-repeat: repeat;
+      background-attachment: fixed; /* Parallax effect */
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.2);
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    body::after {
+        content: '';
+        position: fixed;
+        width: 1000px;
+        height: 1000px;
+        top: -500px;
+        left: -500px;
+        background: radial-gradient(circle, rgba(119, 194, 92, 0.6) 0%, transparent 70%);
+        animation: move-bg 30s linear infinite;
+        z-index: -1;
+        opacity: 0.3;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes move-bg {
+        0% { transform: translate(0, 0); }
+        25% { transform: translate(100px, 100px); }
+        50% { transform: translate(200px, -50px); }
+        75% { transform: translate(-100px, 50px); }
+        100% { transform: translate(0, 0); }
+    }
+
+    .animate-pulse-on-load {
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .fade-in-on-scroll {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    }
+
+    .fade-in-on-scroll.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
   </style>
 </head>
-<body class="min-h-screen" style="background-color:#002338;">
+<body class="min-h-screen">
 
   <header class="w-full py-4" style="background-color:#002338;">
     <div class="max-w-5xl mx-auto flex justify-center items-center gap-6">
       <img src="https://github.com/AnalistaGn/dashboard-gn-e/blob/main/Grupo%20%5E%20Norte_%20Creamos%20.png?raw=true" 
            alt="Grupo Norte" class="h-16 object-contain" />
       <img src="https://github.com/AnalistaGn/dashboard-gn-e/blob/main/Norti%CC%81n%20Verde.png?raw=true" 
-           alt="Nortín Verde" class="h-16 object-contain" />
+           alt="Nortín Verde" class="h-16 object-contain animate-pulse-on-load" id="nortinImage" />
     </div>
   </header>
 
@@ -55,7 +122,7 @@
       </button>
     </div>
     
-    <div class="bg-gray-100 rounded-lg mb-4 overflow-hidden">
+    <div class="bg-gray-100 rounded-lg mb-4 overflow-hidden fade-in-on-scroll">
         <div class="p-3 bg-green-500 text-white cursor-pointer flex justify-between items-center" onclick="toggleStatsPanel()">
             <h3 class="font-bold">📊 Panel de Estadísticas</h3>
             <span id="statsArrow" class="transform transition-transform">▼</span>
@@ -104,7 +171,7 @@
         </div>
     </div>
     
-    <div class="bg-gray-100 rounded-lg mb-4 overflow-hidden">
+    <div class="bg-gray-100 rounded-lg mb-4 overflow-hidden fade-in-on-scroll">
       <div class="p-3 bg-gray-200 cursor-pointer flex justify-between items-center" onclick="toggleDebugPanel()">
         <h3 class="font-bold text-gray-700">🔧 Panel de Debug</h3>
         <span id="debugArrow" class="transform transition-transform">▼</span>
@@ -125,7 +192,7 @@
       <div id="results" class="space-y-3"></div>
     </div>
 
-    <div id="historialSection" class="bg-gray-50 rounded-lg p-4 hidden">
+    <div id="historialSection" class="bg-gray-50 rounded-lg p-4 hidden fade-in-on-scroll">
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-xl font-bold text-gray-800">📊 Historial de Gestiones</h2>
         <div class="flex gap-2">
@@ -536,6 +603,23 @@
     let gestiones = [];
     let currentCandidates = []; // Variable para guardar los candidatos de la búsqueda actual
     let recruitmentStatusChart, candidatesByPositionChart; // Variables para los gráficos
+    
+    // =========================================================================
+    // ===== NUEVAS FUNCIONES PARA ANIMACIONES AL HACER SCROLL =====
+    // =========================================================================
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('is-visible');
+            }
+        });
+    }, { threshold: 0.1 });
+
+    function setupScrollAnimations() {
+        document.querySelectorAll('.fade-in-on-scroll').forEach(element => {
+            observer.observe(element);
+        });
+    }
 
     // 📊 Funciones para el Panel de Estadísticas
     function toggleStatsPanel() {
@@ -1327,6 +1411,7 @@
     window.addEventListener('load', () => {
       updateDebugInfo("🚀 Sistema de Reclutamiento iniciado");
       renderHistorial();
+      setupScrollAnimations();
     });
   </script>
 </body>
